@@ -1,0 +1,976 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Monopoly - Learn While You Play!</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+
+        .game-container {
+            background: white;
+            border-radius: 20px;
+            box-shadow: 0 20px 40px rgba(0,0,0,0.1);
+            padding: 30px;
+            max-width: 1200px;
+            width: 100%;
+        }
+
+        .game-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .game-title {
+            font-size: 2.5rem;
+            color: #2c3e50;
+            margin-bottom: 10px;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.1);
+        }
+
+        .game-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            flex-wrap: wrap;
+            gap: 15px;
+        }
+
+        .timer, .round-counter {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a24);
+            color: white;
+            padding: 10px 20px;
+            border-radius: 25px;
+            font-weight: bold;
+            font-size: 1.1rem;
+        }
+
+        .board-container {
+            display: flex;
+            gap: 30px;
+            align-items: flex-start;
+        }
+
+        .board {
+            width: 600px;
+            height: 600px;
+            border: 8px solid #2c3e50;
+            border-radius: 15px;
+            position: relative;
+            background: linear-gradient(45deg, #f8f9fa, #e9ecef);
+            display: grid;
+            grid-template-columns: repeat(6, 1fr);
+            grid-template-rows: repeat(6, 1fr);
+        }
+
+        .space {
+            border: 2px solid #34495e;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            padding: 8px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+
+        .space:hover {
+            transform: scale(1.05);
+            z-index: 10;
+        }
+
+        .corner {
+            background: linear-gradient(45deg, #3498db, #2980b9);
+            color: white;
+        }
+
+        .property {
+            background: linear-gradient(45deg, #2ecc71, #27ae60);
+            color: white;
+        }
+
+        .chance {
+            background: linear-gradient(45deg, #f39c12, #e67e22);
+            color: white;
+        }
+
+        .special {
+            background: linear-gradient(45deg, #9b59b6, #8e44ad);
+            color: white;
+        }
+
+        .token {
+            position: absolute;
+            width: 25px;
+            height: 25px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.2rem;
+            z-index: 100;
+            transition: all 0.5s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.3);
+        }
+
+        .token.moving {
+            animation: bounce 0.5s ease-in-out;
+        }
+
+        @keyframes bounce {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .player1 { background: #e74c3c; }
+        .player2 { background: #3498db; }
+        .player3 { background: #2ecc71; }
+        .player4 { background: #f39c12; }
+
+        .game-controls {
+            flex: 1;
+            min-width: 300px;
+        }
+
+        .players-panel {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-bottom: 20px;
+        }
+
+        .player-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px;
+            margin: 5px 0;
+            border-radius: 10px;
+            transition: all 0.3s ease;
+        }
+
+        .player-info.active {
+            background: linear-gradient(45deg, #74b9ff, #0984e3);
+            color: white;
+            transform: scale(1.02);
+        }
+
+        .dice-container {
+            text-align: center;
+            margin: 20px 0;
+        }
+
+        .dice {
+            display: inline-block;
+            width: 60px;
+            height: 60px;
+            background: white;
+            border: 3px solid #2c3e50;
+            border-radius: 10px;
+            margin: 0 10px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .dice:hover {
+            transform: scale(1.1);
+        }
+
+        .dice.rolling {
+            animation: roll 1s ease-in-out;
+        }
+
+        @keyframes roll {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(720deg); }
+        }
+
+        .roll-button {
+            background: linear-gradient(45deg, #00b894, #00a085);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            margin: 10px;
+        }
+
+        .roll-button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        .roll-button:disabled {
+            background: #bdc3c7;
+            cursor: not-allowed;
+            transform: none;
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.8);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+        }
+
+        .modal-content {
+            background: white;
+            padding: 30px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            animation: modalSlide 0.3s ease-out;
+        }
+
+        @keyframes modalSlide {
+            from { transform: translateY(-50px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+
+        .question {
+            font-size: 1.2rem;
+            margin-bottom: 20px;
+            color: #2c3e50;
+        }
+
+        .answer-btn {
+            display: block;
+            width: 100%;
+            padding: 15px;
+            margin: 10px 0;
+            border: 2px solid #3498db;
+            background: white;
+            color: #3498db;
+            border-radius: 10px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-size: 1rem;
+        }
+
+        .answer-btn:hover {
+            background: #3498db;
+            color: white;
+        }
+
+        .money-animation {
+            position: absolute;
+            font-size: 1.5rem;
+            font-weight: bold;
+            pointer-events: none;
+            z-index: 200;
+            animation: floatUp 2s ease-out forwards;
+        }
+
+        @keyframes floatUp {
+            0% { transform: translateY(0); opacity: 1; }
+            100% { transform: translateY(-50px); opacity: 0; }
+        }
+
+        .combo-glow {
+            animation: glow 1s ease-in-out;
+        }
+
+        @keyframes glow {
+            0%, 100% { box-shadow: 0 0 5px rgba(46, 204, 113, 0.5); }
+            50% { box-shadow: 0 0 20px rgba(46, 204, 113, 1), 0 0 30px rgba(46, 204, 113, 0.8); }
+        }
+
+        .card {
+            background: linear-gradient(45deg, #fd79a8, #e84393);
+            color: white;
+            padding: 20px;
+            border-radius: 15px;
+            margin: 10px 0;
+            cursor: pointer;
+            transition: all 0.6s ease;
+            transform-style: preserve-3d;
+        }
+
+        .card.flipped {
+            transform: rotateY(180deg);
+        }
+
+        .leaderboard {
+            background: #f8f9fa;
+            border-radius: 15px;
+            padding: 20px;
+            margin-top: 20px;
+        }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #6c5ce7, #5f3dc4);
+            color: white;
+            border: none;
+            padding: 15px 30px;
+            border-radius: 25px;
+            font-size: 1.1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            width: 100%;
+            margin-top: 15px;
+        }
+
+        .restart-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0,0,0,0.2);
+        }
+
+        @media (max-width: 768px) {
+            .board-container {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .board {
+                width: 100%;
+                max-width: 500px;
+                height: 500px;
+            }
+            
+            .game-title {
+                font-size: 2rem;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="game-header">
+            <h1 class="game-title">🎲 Database Monopoly 📊</h1>
+            <div class="game-info">
+                <div class="timer">⏰ Time: <span id="timer">30:00</span></div>
+                <div class="round-counter">🎯 Round: <span id="round">1</span>/10</div>
+            </div>
+        </div>
+
+        <div class="board-container">
+            <div class="board" id="board">
+                <!-- Board spaces will be generated by JavaScript -->
+            </div>
+
+            <div class="game-controls">
+                <div class="players-panel">
+                    <h3>👥 Players</h3>
+                    <div id="players-list">
+                        <!-- Player info will be generated by JavaScript -->
+                    </div>
+                </div>
+
+                <div class="dice-container">
+                    <div class="dice" id="dice1">🎲</div>
+                    <div class="dice" id="dice2">🎲</div>
+                    <button class="roll-button" id="rollBtn">🎲 Roll Dice</button>
+                </div>
+
+                <div class="leaderboard">
+                    <h3>🏆 Leaderboard</h3>
+                    <div id="leaderboard-list">
+                        <!-- Leaderboard will be updated by JavaScript -->
+                    </div>
+                </div>
+
+                <button class="restart-btn" onclick="restartGame()">🔄 New Game</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Question Modal -->
+    <div class="modal" id="questionModal">
+        <div class="modal-content">
+            <h3>📚 Database Challenge!</h3>
+            <div class="question" id="questionText"></div>
+            <div id="answersContainer"></div>
+        </div>
+    </div>
+
+    <!-- Event Card Modal -->
+    <div class="modal" id="cardModal">
+        <div class="modal-content">
+            <div class="card" id="eventCard" onclick="flipCard()">
+                <div>🎴 Click to flip card!</div>
+            </div>
+            <button class="roll-button" id="cardOkBtn" style="display:none;" onclick="closeCardModal()">Continue</button>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let gameState = {
+            players: [
+                { id: 1, name: 'Player 1', money: 1500, position: 0, combo: 0, color: '#e74c3c' },
+                { id: 2, name: 'Player 2', money: 1500, position: 0, combo: 0, color: '#3498db' },
+                { id: 3, name: 'Player 3', money: 1500, position: 0, combo: 0, color: '#2ecc71' },
+                { id: 4, name: 'Player 4', money: 1500, position: 0, combo: 0, color: '#f39c12' }
+            ],
+            currentPlayer: 0,
+            round: 1,
+            maxRounds: 10,
+            timeLeft: 1800, // 30 minutes in seconds
+            gameActive: true
+        };
+
+        // Board spaces
+        const boardSpaces = [
+            { name: 'START', type: 'corner', reward: 200 },
+            { name: 'SQL Street', type: 'property', price: 100 },
+            { name: 'Chance', type: 'chance' },
+            { name: 'Index Avenue', type: 'property', price: 120 },
+            { name: 'Primary Key Plaza', type: 'property', price: 140 },
+            { name: 'Database Jail', type: 'corner' },
+            { name: 'Foreign Key Lane', type: 'property', price: 160 },
+            { name: 'Normalization Blvd', type: 'property', price: 180 },
+            { name: 'Chance', type: 'chance' },
+            { name: 'JOIN Junction', type: 'property', price: 200 },
+            { name: 'Query Corner', type: 'corner' },
+            { name: 'Transaction St', type: 'property', price: 220 },
+            { name: 'ACID Avenue', type: 'property', price: 240 },
+            { name: 'Chance', type: 'chance' },
+            { name: 'Backup Boulevard', type: 'property', price: 260 },
+            { name: 'NoSQL Plaza', type: 'corner' },
+            { name: 'MongoDB Mall', type: 'property', price: 280 },
+            { name: 'Chance', type: 'chance' },
+            { name: 'Redis Road', type: 'property', price: 300 },
+            { name: 'Big Data Blvd', type: 'special', price: 350 }
+        ];
+
+        // Database questions
+        const questions = [
+            {
+                question: "What does SQL stand for?",
+                answers: ["Structured Query Language", "Simple Query Language", "Standard Query Language", "System Query Language"],
+                correct: 0
+            },
+            {
+                question: "Which normal form eliminates partial dependencies?",
+                answers: ["1NF", "2NF", "3NF", "BCNF"],
+                correct: 1
+            },
+            {
+                question: "What is a primary key?",
+                answers: ["A foreign reference", "A unique identifier", "An index", "A constraint"],
+                correct: 1
+            },
+            {
+                question: "Which JOIN returns all records from both tables?",
+                answers: ["INNER JOIN", "LEFT JOIN", "RIGHT JOIN", "FULL OUTER JOIN"],
+                correct: 3
+            },
+            {
+                question: "What does ACID stand for in databases?",
+                answers: ["Atomicity, Consistency, Isolation, Durability", "Access, Control, Index, Data", "Atomic, Concurrent, Isolated, Durable", "All, Consistent, Independent, Distributed"],
+                correct: 0
+            }
+        ];
+
+        // Event cards
+        const eventCards = [
+            { text: "🎉 Database optimization bonus!", effect: 150 },
+            { text: "💸 Server maintenance cost!", effect: -100 },
+            { text: "🚀 Performance improvement reward!", effect: 200 },
+            { text: "⚠️ Data corruption penalty!", effect: -150 },
+            { text: "🎯 Successful backup bonus!", effect: 100 },
+            { text: "🔧 System upgrade cost!", effect: -80 }
+        ];
+
+        // Audio context for sound effects
+        let audioContext;
+        
+        function initAudio() {
+            if (!audioContext) {
+                audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            }
+        }
+
+        function playSound(type) {
+            initAudio();
+            
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            switch(type) {
+                case 'dice':
+                    oscillator.frequency.setValueAtTime(800, audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(400, audioContext.currentTime + 0.1);
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.1);
+                    break;
+                case 'correct':
+                    oscillator.frequency.setValueAtTime(523, audioContext.currentTime);
+                    oscillator.frequency.setValueAtTime(659, audioContext.currentTime + 0.1);
+                    oscillator.frequency.setValueAtTime(784, audioContext.currentTime + 0.2);
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.3);
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.3);
+                    break;
+                case 'wrong':
+                    oscillator.frequency.setValueAtTime(200, audioContext.currentTime);
+                    gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.5);
+                    break;
+                case 'money':
+                    oscillator.frequency.setValueAtTime(440, audioContext.currentTime);
+                    oscillator.frequency.exponentialRampToValueAtTime(880, audioContext.currentTime + 0.2);
+                    gainNode.gain.setValueAtTime(0.2, audioContext.currentTime);
+                    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+                    oscillator.start();
+                    oscillator.stop(audioContext.currentTime + 0.2);
+                    break;
+            }
+        }
+
+        // Initialize game
+        function initGame() {
+            createBoard();
+            createPlayerTokens();
+            updatePlayersDisplay();
+            updateLeaderboard();
+            startTimer();
+        }
+
+        function createBoard() {
+            const board = document.getElementById('board');
+            board.innerHTML = '';
+            
+            // Create board layout (perimeter spaces)
+            const positions = [
+                // Top row (left to right)
+                {row: 0, col: 0}, {row: 0, col: 1}, {row: 0, col: 2}, {row: 0, col: 3}, {row: 0, col: 4}, {row: 0, col: 5},
+                // Right column (top to bottom, excluding corners)
+                {row: 1, col: 5}, {row: 2, col: 5}, {row: 3, col: 5}, {row: 4, col: 5},
+                // Bottom row (right to left)
+                {row: 5, col: 5}, {row: 5, col: 4}, {row: 5, col: 3}, {row: 5, col: 2}, {row: 5, col: 1}, {row: 5, col: 0},
+                // Left column (bottom to top, excluding corners)
+                {row: 4, col: 0}, {row: 3, col: 0}, {row: 2, col: 0}, {row: 1, col: 0}
+            ];
+
+            // Create all grid spaces first
+            for (let i = 0; i < 36; i++) {
+                const space = document.createElement('div');
+                space.className = 'space';
+                space.style.gridRow = Math.floor(i / 6) + 1;
+                space.style.gridColumn = (i % 6) + 1;
+                
+                // Check if this is a board space
+                const boardIndex = positions.findIndex(pos => 
+                    pos.row === Math.floor(i / 6) && pos.col === i % 6
+                );
+                
+                if (boardIndex !== -1) {
+                    const spaceData = boardSpaces[boardIndex];
+                    space.className += ` ${spaceData.type}`;
+                    space.innerHTML = `<div>${spaceData.name}</div>`;
+                    if (spaceData.price) {
+                        space.innerHTML += `<div>$${spaceData.price}</div>`;
+                    }
+                    space.dataset.index = boardIndex;
+                } else {
+                    // Center spaces - decorative
+                    space.style.border = 'none';
+                    space.style.background = 'transparent';
+                    if (i === 14) { // Center space
+                        space.innerHTML = '<div style="font-size: 2rem;">🎲<br>DATABASE<br>MONOPOLY</div>';
+                        space.style.color = '#2c3e50';
+                        space.style.fontWeight = 'bold';
+                    }
+                }
+                
+                board.appendChild(space);
+            }
+        }
+
+        function createPlayerTokens() {
+            gameState.players.forEach((player, index) => {
+                const token = document.createElement('div');
+                token.className = `token player${index + 1}`;
+                token.id = `token${index + 1}`;
+                token.innerHTML = `${index + 1}`;
+                token.style.background = player.color;
+                
+                // Position at start
+                positionToken(token, 0, index);
+                document.getElementById('board').appendChild(token);
+            });
+        }
+
+        function positionToken(token, spaceIndex, playerOffset = 0) {
+            const positions = [
+                // Top row
+                {row: 0, col: 0}, {row: 0, col: 1}, {row: 0, col: 2}, {row: 0, col: 3}, {row: 0, col: 4}, {row: 0, col: 5},
+                // Right column
+                {row: 1, col: 5}, {row: 2, col: 5}, {row: 3, col: 5}, {row: 4, col: 5},
+                // Bottom row
+                {row: 5, col: 5}, {row: 5, col: 4}, {row: 5, col: 3}, {row: 5, col: 2}, {row: 5, col: 1}, {row: 5, col: 0},
+                // Left column
+                {row: 4, col: 0}, {row: 3, col: 0}, {row: 2, col: 0}, {row: 1, col: 0}
+            ];
+            
+            const pos = positions[spaceIndex];
+            const spaceSize = 100; // Approximate size of each space
+            
+            // Offset tokens so they don't overlap
+            const offsetX = (playerOffset % 2) * 15 - 7;
+            const offsetY = Math.floor(playerOffset / 2) * 15 - 7;
+            
+            token.style.left = `${pos.col * spaceSize + 37 + offsetX}px`;
+            token.style.top = `${pos.row * spaceSize + 37 + offsetY}px`;
+        }
+
+        function updatePlayersDisplay() {
+            const playersList = document.getElementById('players-list');
+            playersList.innerHTML = '';
+            
+            gameState.players.forEach((player, index) => {
+                const playerDiv = document.createElement('div');
+                playerDiv.className = `player-info ${index === gameState.currentPlayer ? 'active' : ''}`;
+                playerDiv.innerHTML = `
+                    <span>${player.name}</span>
+                    <span>💰 $${player.money}</span>
+                `;
+                if (player.combo > 0) {
+                    playerDiv.innerHTML += ` <span>🔥 ${player.combo}x</span>`;
+                }
+                playersList.appendChild(playerDiv);
+            });
+        }
+
+        function updateLeaderboard() {
+            const leaderboard = document.getElementById('leaderboard-list');
+            const sortedPlayers = [...gameState.players].sort((a, b) => b.money - a.money);
+            
+            leaderboard.innerHTML = sortedPlayers.map((player, index) => 
+                `<div style="padding: 5px 0; display: flex; justify-content: space-between;">
+                    <span>${index + 1}. ${player.name}</span>
+                    <span>$${player.money}</span>
+                </div>`
+            ).join('');
+        }
+
+        function rollDice() {
+            if (!gameState.gameActive) return;
+            
+            playSound('dice');
+            
+            const dice1 = document.getElementById('dice1');
+            const dice2 = document.getElementById('dice2');
+            const rollBtn = document.getElementById('rollBtn');
+            
+            dice1.classList.add('rolling');
+            dice2.classList.add('rolling');
+            rollBtn.disabled = true;
+            
+            setTimeout(() => {
+                const roll1 = Math.floor(Math.random() * 6) + 1;
+                const roll2 = Math.floor(Math.random() * 6) + 1;
+                const total = roll1 + roll2;
+                
+                dice1.innerHTML = roll1;
+                dice2.innerHTML = roll2;
+                dice1.classList.remove('rolling');
+                dice2.classList.remove('rolling');
+                
+                movePlayer(total);
+            }, 1000);
+        }
+
+        function movePlayer(spaces) {
+            const currentPlayer = gameState.players[gameState.currentPlayer];
+            const token = document.getElementById(`token${gameState.currentPlayer + 1}`);
+            
+            let newPosition = (currentPlayer.position + spaces) % boardSpaces.length;
+            
+            // Check if passed START
+            if (currentPlayer.position + spaces >= boardSpaces.length) {
+                currentPlayer.money += 200;
+                showMoneyAnimation(token, '+$200', '#2ecc71');
+                playSound('money');
+            }
+            
+            currentPlayer.position = newPosition;
+            
+            // Animate token movement
+            token.classList.add('moving');
+            positionToken(token, newPosition, gameState.currentPlayer);
+            
+            setTimeout(() => {
+                token.classList.remove('moving');
+                handleSpaceLanding(newPosition);
+            }, 500);
+        }
+
+        function handleSpaceLanding(spaceIndex) {
+            const space = boardSpaces[spaceIndex];
+            const currentPlayer = gameState.players[gameState.currentPlayer];
+            
+            switch (space.type) {
+                case 'property':
+                    showQuestion();
+                    break;
+                case 'chance':
+                    showEventCard();
+                    break;
+                case 'corner':
+                    if (space.reward) {
+                        currentPlayer.money += space.reward;
+                        const token = document.getElementById(`token${gameState.currentPlayer + 1}`);
+                        showMoneyAnimation(token, `+$${space.reward}`, '#2ecc71');
+                        playSound('money');
+                    }
+                    nextTurn();
+                    break;
+                case 'special':
+                    showQuestion();
+                    break;
+                default:
+                    nextTurn();
+            }
+        }
+
+        function showQuestion() {
+            const modal = document.getElementById('questionModal');
+            const questionText = document.getElementById('questionText');
+            const answersContainer = document.getElementById('answersContainer');
+            
+            const question = questions[Math.floor(Math.random() * questions.length)];
+            
+            questionText.textContent = question.question;
+            answersContainer.innerHTML = '';
+            
+            question.answers.forEach((answer, index) => {
+                const button = document.createElement('button');
+                button.className = 'answer-btn';
+                button.textContent = answer;
+                button.onclick = () => handleAnswer(index === question.correct, modal);
+                answersContainer.appendChild(button);
+            });
+            
+            modal.style.display = 'flex';
+        }
+
+        function handleAnswer(isCorrect, modal) {
+            const currentPlayer = gameState.players[gameState.currentPlayer];
+            const token = document.getElementById(`token${gameState.currentPlayer + 1}`);
+            
+            if (isCorrect) {
+                playSound('correct');
+                currentPlayer.combo++;
+                const reward = 100 + (currentPlayer.combo * 25);
+                currentPlayer.money += reward;
+                showMoneyAnimation(token, `+$${reward}`, '#2ecc71');
+                
+                if (currentPlayer.combo > 1) {
+                    token.classList.add('combo-glow');
+                    setTimeout(() => token.classList.remove('combo-glow'), 1000);
+                }
+            } else {
+                playSound('wrong');
+                currentPlayer.combo = 0;
+                const penalty = 50;
+                currentPlayer.money = Math.max(0, currentPlayer.money - penalty);
+                showMoneyAnimation(token, `-$${penalty}`, '#e74c3c');
+            }
+            
+            modal.style.display = 'none';
+            updatePlayersDisplay();
+            updateLeaderboard();
+            nextTurn();
+        }
+
+        function showEventCard() {
+            const modal = document.getElementById('cardModal');
+            const card = document.getElementById('eventCard');
+            const okBtn = document.getElementById('cardOkBtn');
+            
+            card.classList.remove('flipped');
+            card.innerHTML = '<div>🎴 Click to flip card!</div>';
+            okBtn.style.display = 'none';
+            
+            modal.style.display = 'flex';
+        }
+
+        function flipCard() {
+            const card = document.getElementById('eventCard');
+            const okBtn = document.getElementById('cardOkBtn');
+            
+            if (card.classList.contains('flipped')) return;
+            
+            card.classList.add('flipped');
+            
+            setTimeout(() => {
+                const eventCard = eventCards[Math.floor(Math.random() * eventCards.length)];
+                const currentPlayer = gameState.players[gameState.currentPlayer];
+                
+                card.innerHTML = `<div>${eventCard.text}</div>`;
+                
+                currentPlayer.money = Math.max(0, currentPlayer.money + eventCard.effect);
+                
+                const token = document.getElementById(`token${gameState.currentPlayer + 1}`);
+                const sign = eventCard.effect > 0 ? '+' : '';
+                const color = eventCard.effect > 0 ? '#2ecc71' : '#e74c3c';
+                showMoneyAnimation(token, `${sign}$${eventCard.effect}`, color);
+                
+                if (eventCard.effect > 0) {
+                    playSound('money');
+                } else {
+                    playSound('wrong');
+                }
+                
+                updatePlayersDisplay();
+                updateLeaderboard();
+                okBtn.style.display = 'block';
+            }, 300);
+        }
+
+        function closeCardModal() {
+            document.getElementById('cardModal').style.display = 'none';
+            nextTurn();
+        }
+
+        function showMoneyAnimation(element, text, color) {
+            const animation = document.createElement('div');
+            animation.className = 'money-animation';
+            animation.textContent = text;
+            animation.style.color = color;
+            animation.style.left = element.style.left;
+            animation.style.top = element.style.top;
+            
+            document.getElementById('board').appendChild(animation);
+            
+            setTimeout(() => {
+                animation.remove();
+            }, 2000);
+        }
+
+        function nextTurn() {
+            gameState.currentPlayer = (gameState.currentPlayer + 1) % gameState.players.length;
+            
+            if (gameState.currentPlayer === 0) {
+                gameState.round++;
+                document.getElementById('round').textContent = gameState.round;
+                
+                if (gameState.round > gameState.maxRounds) {
+                    endGame();
+                    return;
+                }
+            }
+            
+            updatePlayersDisplay();
+            document.getElementById('rollBtn').disabled = false;
+        }
+
+        function startTimer() {
+            const timerInterval = setInterval(() => {
+                if (!gameState.gameActive) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+                
+                gameState.timeLeft--;
+                const minutes = Math.floor(gameState.timeLeft / 60);
+                const seconds = gameState.timeLeft % 60;
+                document.getElementById('timer').textContent = 
+                    `${minutes}:${seconds.toString().padStart(2, '0')}`;
+                
+                if (gameState.timeLeft <= 0) {
+                    clearInterval(timerInterval);
+                    endGame();
+                }
+            }, 1000);
+        }
+
+        function endGame() {
+            gameState.gameActive = false;
+            document.getElementById('rollBtn').disabled = true;
+            
+            const winner = gameState.players.reduce((prev, current) => 
+                prev.money > current.money ? prev : current
+            );
+            
+            alert(`🎉 Game Over! ${winner.name} wins with $${winner.money}!`);
+        }
+
+        function restartGame() {
+            // Reset game state
+            gameState = {
+                players: [
+                    { id: 1, name: 'Player 1', money: 1500, position: 0, combo: 0, color: '#e74c3c' },
+                    { id: 2, name: 'Player 2', money: 1500, position: 0, combo: 0, color: '#3498db' },
+                    { id: 3, name: 'Player 3', money: 1500, position: 0, combo: 0, color: '#2ecc71' },
+                    { id: 4, name: 'Player 4', money: 1500, position: 0, combo: 0, color: '#f39c12' }
+                ],
+                currentPlayer: 0,
+                round: 1,
+                maxRounds: 10,
+                timeLeft: 1800,
+                gameActive: true
+            };
+            
+            // Reset UI
+            document.getElementById('timer').textContent = '30:00';
+            document.getElementById('round').textContent = '1';
+            document.getElementById('dice1').innerHTML = '🎲';
+            document.getElementById('dice2').innerHTML = '🎲';
+            document.getElementById('rollBtn').disabled = false;
+            
+            // Remove existing tokens
+            document.querySelectorAll('.token').forEach(token => token.remove());
+            
+            // Reinitialize
+            createPlayerTokens();
+            updatePlayersDisplay();
+            updateLeaderboard();
+            startTimer();
+        }
+
+        // Event listeners
+        document.getElementById('rollBtn').addEventListener('click', rollDice);
+
+        // Initialize game on load
+        window.addEventListener('load', initGame);
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'980ebc61e6911ec5',t:'MTc1ODE3NjQxMC4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
+
+

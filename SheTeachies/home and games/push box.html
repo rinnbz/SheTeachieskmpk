@@ -1,0 +1,1087 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Maze Co-op Challenge</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            color: white;
+            overflow: hidden;
+        }
+
+        .game-container {
+            width: 100vw;
+            height: 100vh;
+            position: relative;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .hud {
+            height: 80px;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 0 20px;
+            border-bottom: 3px solid #ffd700;
+        }
+
+        .timer {
+            font-size: 24px;
+            font-weight: bold;
+            color: #ffd700;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .timer.warning {
+            color: #ff4444;
+            animation: pulse 0.5s infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.5; }
+        }
+
+        .level-info {
+            font-size: 20px;
+            color: #87ceeb;
+        }
+
+        .questions-display {
+            display: flex;
+            gap: 20px;
+            font-size: 14px;
+        }
+
+        .question-item {
+            background: rgba(0, 0, 0, 0.5);
+            padding: 10px;
+            border-radius: 5px;
+            border: 2px solid #ffd700;
+        }
+
+        .maze-container {
+            flex: 1;
+            position: relative;
+            background: #2c3e50;
+            overflow: hidden;
+        }
+
+        .maze {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+        }
+
+        .wall {
+            position: absolute;
+            background: #34495e;
+            border: 2px solid #2c3e50;
+            box-shadow: inset 0 0 10px rgba(0, 0, 0, 0.5);
+        }
+
+        .route {
+            position: absolute;
+            background: rgba(52, 152, 219, 0.1);
+            border: 1px dashed rgba(52, 152, 219, 0.3);
+        }
+
+        .player {
+            width: 25px;
+            height: 25px;
+            position: absolute;
+            border-radius: 50%;
+            border: 3px solid;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: bold;
+            font-size: 12px;
+            transition: all 0.1s ease;
+            z-index: 20;
+        }
+
+        .player1 {
+            background: #e74c3c;
+            border-color: #c0392b;
+            color: white;
+        }
+
+        .player2 {
+            background: #3498db;
+            border-color: #2980b9;
+            color: white;
+        }
+
+        .answer-box {
+            width: 50px;
+            height: 30px;
+            position: absolute;
+            background: #9b59b6;
+            border: 2px solid #8e44ad;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 9px;
+            font-weight: bold;
+            color: white;
+            text-align: center;
+            padding: 2px;
+            transition: all 0.2s ease;
+            z-index: 15;
+        }
+
+        .answer-box.correct {
+            background: #27ae60;
+            border-color: #229954;
+            box-shadow: 0 0 15px rgba(39, 174, 96, 0.8);
+        }
+
+        .answer-box.wrong {
+            background: #e74c3c;
+            border-color: #c0392b;
+            animation: shake 0.5s ease-in-out;
+        }
+
+        @keyframes shake {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-3px); }
+            75% { transform: translateX(3px); }
+        }
+
+        .answer-slot {
+            width: 60px;
+            height: 40px;
+            position: absolute;
+            border: 3px dashed #ffd700;
+            border-radius: 8px;
+            background: rgba(255, 215, 0, 0.1);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            color: #ffd700;
+            animation: glow 2s ease-in-out infinite alternate;
+            z-index: 10;
+        }
+
+        @keyframes glow {
+            from { box-shadow: 0 0 5px rgba(255, 215, 0, 0.3); }
+            to { box-shadow: 0 0 15px rgba(255, 215, 0, 0.8); }
+        }
+
+        .door {
+            position: absolute;
+            background: #8b4513;
+            border: 3px solid #654321;
+            border-radius: 5px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+            transition: all 0.8s ease;
+            z-index: 12;
+        }
+
+        .door.opening {
+            transform: scale(0);
+            opacity: 0;
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 10px;
+            left: 10px;
+            font-size: 11px;
+            color: #bdc3c7;
+            background: rgba(0, 0, 0, 0.7);
+            padding: 8px;
+            border-radius: 5px;
+        }
+
+        .game-over, .victory {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+        }
+
+        .game-over h2, .victory h2 {
+            font-size: 48px;
+            margin-bottom: 20px;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+        }
+
+        .game-over h2 {
+            color: #e74c3c;
+        }
+
+        .victory h2 {
+            color: #27ae60;
+        }
+
+        .restart-btn {
+            padding: 15px 30px;
+            font-size: 18px;
+            background: #3498db;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: background 0.3s ease;
+        }
+
+        .restart-btn:hover {
+            background: #2980b9;
+        }
+
+        .leaderboard {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .leaderboard h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+
+        .status-message {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 0, 0, 0.9);
+            padding: 20px;
+            border-radius: 10px;
+            font-size: 18px;
+            font-weight: bold;
+            color: #ffd700;
+            display: none;
+            z-index: 100;
+            text-align: center;
+        }
+
+        .flash-red {
+            animation: flashRed 0.5s ease-in-out;
+        }
+
+        @keyframes flashRed {
+            0%, 100% { background: #2c3e50; }
+            50% { background: #c0392b; }
+        }
+
+        .start-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        }
+
+        .start-screen h1 {
+            font-size: 48px;
+            color: #ffd700;
+            margin-bottom: 20px;
+            text-shadow: 3px 3px 6px rgba(0, 0, 0, 0.8);
+            text-align: center;
+        }
+
+        .start-screen .subtitle {
+            font-size: 20px;
+            color: #87ceeb;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .start-screen .instructions {
+            background: rgba(0, 0, 0, 0.7);
+            padding: 20px;
+            border-radius: 10px;
+            margin-bottom: 30px;
+            max-width: 600px;
+            text-align: center;
+        }
+
+        .start-screen .instructions h3 {
+            color: #ffd700;
+            margin-bottom: 15px;
+        }
+
+        .start-screen .instructions p {
+            margin-bottom: 10px;
+            color: #bdc3c7;
+        }
+
+        .start-btn {
+            padding: 20px 40px;
+            font-size: 24px;
+            background: linear-gradient(45deg, #e74c3c, #3498db);
+            color: white;
+            border: none;
+            border-radius: 15px;
+            cursor: pointer;
+            font-weight: bold;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            transition: all 0.3s ease;
+            box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
+        }
+
+        .start-btn:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(0, 0, 0, 0.4);
+            background: linear-gradient(45deg, #c0392b, #2980b9);
+        }
+
+        .start-btn:active {
+            transform: translateY(0);
+        }
+    </style>
+</head>
+<body>
+    <div class="game-container">
+        <div class="start-screen" id="startScreen">
+            <h1>🎮 Database Maze Co-op Challenge</h1>
+            <div class="subtitle">Work together to solve database questions and escape the maze!</div>
+            
+            <div class="instructions">
+                <h3>🎯 How to Play</h3>
+                <p><strong>Player 1:</strong> Use WASD keys to move</p>
+                <p><strong>Player 2:</strong> Use Arrow keys to move</p>
+                <p>🔍 Push the correct answer boxes into your glowing slots</p>
+                <p>🚪 Both players must solve their questions to open the doors</p>
+                <p>⏰ Complete all 4 levels before time runs out!</p>
+                <p>🏆 Beat your best time and climb the leaderboard</p>
+            </div>
+            
+            <button class="start-btn" onclick="startGame()">Start Adventure</button>
+        </div>
+
+        <div class="hud">
+            <div class="timer" id="timer">90</div>
+            <div class="level-info">
+                <span>Level <span id="currentLevel">1</span> - Database Maze</span>
+            </div>
+            <div class="questions-display">
+                <div class="question-item">
+                    <strong>P1:</strong> <span id="questionP1">Loading...</span>
+                </div>
+                <div class="question-item">
+                    <strong>P2:</strong> <span id="questionP2">Loading...</span>
+                </div>
+            </div>
+            <div class="timer">🏆 Best: <span id="bestTime">--:--</span></div>
+        </div>
+
+        <div class="maze-container">
+            <div class="maze" id="maze">
+                <!-- Maze elements will be generated here -->
+            </div>
+            
+            <div class="controls">
+                <div>Player 1: WASD keys</div>
+                <div>Player 2: Arrow keys</div>
+                <div>Push correct answers into glowing slots!</div>
+            </div>
+        </div>
+
+        <div class="status-message" id="statusMessage"></div>
+
+        <div class="game-over" id="gameOver">
+            <h2>Time's Up!</h2>
+            <p>The maze remains unsolved...</p>
+            <button class="restart-btn" onclick="restartGame()">Try Again</button>
+        </div>
+
+        <div class="victory" id="victory">
+            <h2>Maze Conquered!</h2>
+            <p>You've mastered the Database Maze!</p>
+            <p>Final Time: <span id="finalTime"></span></p>
+            <div class="leaderboard">
+                <h3>Best Times</h3>
+                <div id="leaderboardList"></div>
+            </div>
+            <button class="restart-btn" onclick="restartGame()">Play Again</button>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let gameState = {
+            currentLevel: 1,
+            maxLevel: 4,
+            timeLeft: 90,
+            gameStartTime: Date.now(),
+            player1Solved: false,
+            player2Solved: false,
+            gameRunning: true
+        };
+
+        // Player positions
+        let players = {
+            player1: { x: 50, y: 50 },
+            player2: { x: 50, y: 100 }
+        };
+
+        // Maze layouts for each level
+        const mazeLayouts = [
+            {
+                walls: [
+                    {x: 0, y: 0, width: 800, height: 20},
+                    {x: 0, y: 0, width: 20, height: 400},
+                    {x: 780, y: 0, width: 20, height: 400},
+                    {x: 0, y: 380, width: 800, height: 20},
+                    {x: 200, y: 100, width: 20, height: 200},
+                    {x: 400, y: 50, width: 20, height: 150},
+                    {x: 600, y: 150, width: 20, height: 200}
+                ],
+                routes: [
+                    {x: 20, y: 20, width: 180, height: 80},
+                    {x: 220, y: 20, width: 180, height: 80},
+                    {x: 420, y: 20, width: 180, height: 30},
+                    {x: 620, y: 20, width: 160, height: 130}
+                ],
+                doors: [
+                    {x: 350, y: 350, width: 50, height: 30, id: 'door1'},
+                    {x: 450, y: 350, width: 50, height: 30, id: 'door2'}
+                ],
+                slots: [
+                    {x: 320, y: 300, player: 1},
+                    {x: 480, y: 300, player: 2}
+                ],
+                playerStarts: [
+                    {x: 50, y: 50},
+                    {x: 700, y: 50}
+                ]
+            },
+            {
+                walls: [
+                    {x: 0, y: 0, width: 800, height: 20},
+                    {x: 0, y: 0, width: 20, height: 400},
+                    {x: 780, y: 0, width: 20, height: 400},
+                    {x: 0, y: 380, width: 800, height: 20},
+                    {x: 150, y: 80, width: 20, height: 120},
+                    {x: 300, y: 120, width: 20, height: 180},
+                    {x: 450, y: 60, width: 20, height: 140},
+                    {x: 600, y: 100, width: 20, height: 200}
+                ],
+                routes: [
+                    {x: 20, y: 20, width: 130, height: 60},
+                    {x: 170, y: 20, width: 130, height: 100},
+                    {x: 320, y: 20, width: 130, height: 40},
+                    {x: 470, y: 20, width: 130, height: 40}
+                ],
+                doors: [
+                    {x: 250, y: 350, width: 50, height: 30, id: 'door1'},
+                    {x: 500, y: 350, width: 50, height: 30, id: 'door2'}
+                ],
+                slots: [
+                    {x: 220, y: 300, player: 1},
+                    {x: 530, y: 300, player: 2}
+                ],
+                playerStarts: [
+                    {x: 50, y: 50},
+                    {x: 700, y: 50}
+                ]
+            }
+        ];
+
+        // Questions and answers for each level
+        const levels = [
+            {
+                questionP1: "Which SQL command retrieves data?",
+                answersP1: ["SELECT", "INSERT", "DELETE", "UPDATE"],
+                correctP1: 0,
+                questionP2: "Which uniquely identifies a row?",
+                answersP2: ["Foreign Key", "Primary Key", "Index", "Column"],
+                correctP2: 1
+            },
+            {
+                questionP1: "What connects tables in relational DB?",
+                answersP1: ["Primary Key", "Foreign Key", "Index", "View"],
+                correctP1: 1,
+                questionP2: "Which permanently deletes a table?",
+                answersP2: ["DELETE", "TRUNCATE", "DROP TABLE", "REMOVE"],
+                correctP2: 2
+            },
+            {
+                questionP1: "ACID properties ensure what?",
+                answersP1: ["Data Integrity", "Fast Queries", "Large Storage", "Easy Access"],
+                correctP1: 0,
+                questionP2: "What is a database index?",
+                answersP2: ["Data Structure", "Table Row", "Column Name", "Database File"],
+                correctP2: 0
+            },
+            {
+                questionP1: "What does SQL stand for?",
+                answersP1: ["Structured Query Language", "Simple Query Logic", "System Query Language", "Standard Query Logic"],
+                correctP1: 0,
+                questionP2: "Which is NOT a database type?",
+                answersP2: ["Relational", "NoSQL", "Graph", "Linear"],
+                correctP2: 3
+            }
+        ];
+
+        // Start game function
+        function startGame() {
+            document.getElementById('startScreen').style.display = 'none';
+            initGame();
+        }
+
+        // Initialize game
+        function initGame() {
+            setupLevel();
+            startTimer();
+            setupEventListeners();
+            loadLeaderboard();
+        }
+
+        function setupLevel() {
+            const level = levels[gameState.currentLevel - 1];
+            const layout = mazeLayouts[(gameState.currentLevel - 1) % mazeLayouts.length];
+            
+            // Update questions
+            document.getElementById('questionP1').textContent = level.questionP1;
+            document.getElementById('questionP2').textContent = level.questionP2;
+            document.getElementById('currentLevel').textContent = gameState.currentLevel;
+
+            // Reset player states
+            gameState.player1Solved = false;
+            gameState.player2Solved = false;
+
+            // Build maze
+            buildMaze(layout);
+
+            // Setup answer boxes
+            setupAnswerBoxes(level, layout);
+
+            // Reset player positions
+            players.player1 = {...layout.playerStarts[0]};
+            players.player2 = {...layout.playerStarts[1]};
+            updatePlayerPositions();
+        }
+
+        function buildMaze(layout) {
+            const maze = document.getElementById('maze');
+            maze.innerHTML = '';
+
+            // Create walls
+            layout.walls.forEach(wall => {
+                const wallElement = document.createElement('div');
+                wallElement.className = 'wall';
+                wallElement.style.left = wall.x + 'px';
+                wallElement.style.top = wall.y + 'px';
+                wallElement.style.width = wall.width + 'px';
+                wallElement.style.height = wall.height + 'px';
+                maze.appendChild(wallElement);
+            });
+
+            // Create routes
+            layout.routes.forEach(route => {
+                const routeElement = document.createElement('div');
+                routeElement.className = 'route';
+                routeElement.style.left = route.x + 'px';
+                routeElement.style.top = route.y + 'px';
+                routeElement.style.width = route.width + 'px';
+                routeElement.style.height = route.height + 'px';
+                maze.appendChild(routeElement);
+            });
+
+            // Create doors
+            layout.doors.forEach(door => {
+                const doorElement = document.createElement('div');
+                doorElement.className = 'door';
+                doorElement.id = door.id;
+                doorElement.style.left = door.x + 'px';
+                doorElement.style.top = door.y + 'px';
+                doorElement.style.width = door.width + 'px';
+                doorElement.style.height = door.height + 'px';
+                doorElement.textContent = '🚪';
+                maze.appendChild(doorElement);
+            });
+
+            // Create answer slots
+            layout.slots.forEach(slot => {
+                const slotElement = document.createElement('div');
+                slotElement.className = 'answer-slot';
+                slotElement.dataset.player = slot.player;
+                slotElement.style.left = slot.x + 'px';
+                slotElement.style.top = slot.y + 'px';
+                slotElement.textContent = `P${slot.player} Slot`;
+                maze.appendChild(slotElement);
+            });
+
+            // Create players
+            const player1 = document.createElement('div');
+            player1.className = 'player player1';
+            player1.id = 'player1';
+            player1.textContent = '1';
+            maze.appendChild(player1);
+
+            const player2 = document.createElement('div');
+            player2.className = 'player player2';
+            player2.id = 'player2';
+            player2.textContent = '2';
+            maze.appendChild(player2);
+        }
+
+        function setupAnswerBoxes(level, layout) {
+            const maze = document.getElementById('maze');
+
+            // Create answer boxes for player 1
+            level.answersP1.forEach((answer, index) => {
+                const box = document.createElement('div');
+                box.className = 'answer-box';
+                box.textContent = answer;
+                box.dataset.correct = index === level.correctP1;
+                box.dataset.player = '1';
+                
+                // Position boxes in accessible areas
+                const positions = [
+                    {x: 100, y: 150}, {x: 150, y: 200}, {x: 100, y: 250}, {x: 50, y: 200}
+                ];
+                box.style.left = positions[index].x + 'px';
+                box.style.top = positions[index].y + 'px';
+                
+                maze.appendChild(box);
+            });
+
+            // Create answer boxes for player 2
+            level.answersP2.forEach((answer, index) => {
+                const box = document.createElement('div');
+                box.className = 'answer-box';
+                box.textContent = answer;
+                box.dataset.correct = index === level.correctP2;
+                box.dataset.player = '2';
+                
+                // Position boxes in accessible areas
+                const positions = [
+                    {x: 650, y: 150}, {x: 700, y: 200}, {x: 650, y: 250}, {x: 600, y: 200}
+                ];
+                box.style.left = positions[index].x + 'px';
+                box.style.top = positions[index].y + 'px';
+                
+                maze.appendChild(box);
+            });
+        }
+
+        function updatePlayerPositions() {
+            document.getElementById('player1').style.left = players.player1.x + 'px';
+            document.getElementById('player1').style.top = players.player1.y + 'px';
+            document.getElementById('player2').style.left = players.player2.x + 'px';
+            document.getElementById('player2').style.top = players.player2.y + 'px';
+        }
+
+        function setupEventListeners() {
+            document.addEventListener('keydown', handleKeyPress);
+        }
+
+        function handleKeyPress(e) {
+            if (!gameState.gameRunning) return;
+
+            const moveDistance = 15;
+            let moved = false;
+            let newPos = {};
+
+            // Player 1 controls (WASD)
+            switch(e.key.toLowerCase()) {
+                case 'w':
+                    newPos = {x: players.player1.x, y: players.player1.y - moveDistance};
+                    if (canMoveTo(newPos)) {
+                        players.player1.y = newPos.y;
+                        moved = true;
+                    }
+                    break;
+                case 's':
+                    newPos = {x: players.player1.x, y: players.player1.y + moveDistance};
+                    if (canMoveTo(newPos)) {
+                        players.player1.y = newPos.y;
+                        moved = true;
+                    }
+                    break;
+                case 'a':
+                    newPos = {x: players.player1.x - moveDistance, y: players.player1.y};
+                    if (canMoveTo(newPos)) {
+                        players.player1.x = newPos.x;
+                        moved = true;
+                    }
+                    break;
+                case 'd':
+                    newPos = {x: players.player1.x + moveDistance, y: players.player1.y};
+                    if (canMoveTo(newPos)) {
+                        players.player1.x = newPos.x;
+                        moved = true;
+                    }
+                    break;
+            }
+
+            // Player 2 controls (Arrow keys)
+            switch(e.key) {
+                case 'ArrowUp':
+                    newPos = {x: players.player2.x, y: players.player2.y - moveDistance};
+                    if (canMoveTo(newPos)) {
+                        players.player2.y = newPos.y;
+                        moved = true;
+                    }
+                    break;
+                case 'ArrowDown':
+                    newPos = {x: players.player2.x, y: players.player2.y + moveDistance};
+                    if (canMoveTo(newPos)) {
+                        players.player2.y = newPos.y;
+                        moved = true;
+                    }
+                    break;
+                case 'ArrowLeft':
+                    newPos = {x: players.player2.x - moveDistance, y: players.player2.y};
+                    if (canMoveTo(newPos)) {
+                        players.player2.x = newPos.x;
+                        moved = true;
+                    }
+                    break;
+                case 'ArrowRight':
+                    newPos = {x: players.player2.x + moveDistance, y: players.player2.y};
+                    if (canMoveTo(newPos)) {
+                        players.player2.x = newPos.x;
+                        moved = true;
+                    }
+                    break;
+            }
+
+            if (moved) {
+                updatePlayerPositions();
+                checkCollisions();
+            }
+        }
+
+        function canMoveTo(pos) {
+            const walls = document.querySelectorAll('.wall');
+            const playerSize = 25;
+            
+            for (let wall of walls) {
+                const wallRect = {
+                    x: parseInt(wall.style.left),
+                    y: parseInt(wall.style.top),
+                    width: parseInt(wall.style.width),
+                    height: parseInt(wall.style.height)
+                };
+                
+                if (pos.x < wallRect.x + wallRect.width &&
+                    pos.x + playerSize > wallRect.x &&
+                    pos.y < wallRect.y + wallRect.height &&
+                    pos.y + playerSize > wallRect.y) {
+                    return false;
+                }
+            }
+            
+            return pos.x >= 0 && pos.y >= 0 && pos.x <= 775 && pos.y <= 375;
+        }
+
+        function checkCollisions() {
+            // Check Player 1 collisions
+            if (!gameState.player1Solved) {
+                checkPlayerBoxCollision(1);
+            }
+
+            // Check Player 2 collisions
+            if (!gameState.player2Solved) {
+                checkPlayerBoxCollision(2);
+            }
+        }
+
+        function checkPlayerBoxCollision(playerNum) {
+            const player = players[`player${playerNum}`];
+            const boxes = document.querySelectorAll(`.answer-box[data-player="${playerNum}"]`);
+            const slot = document.querySelector(`.answer-slot[data-player="${playerNum}"]`);
+
+            boxes.forEach(box => {
+                const boxRect = {
+                    x: parseInt(box.style.left),
+                    y: parseInt(box.style.top),
+                    width: 50,
+                    height: 30
+                };
+
+                const playerRect = {
+                    x: player.x,
+                    y: player.y,
+                    width: 25,
+                    height: 25
+                };
+
+                // Check if player is touching the box
+                if (isColliding(playerRect, boxRect)) {
+                    pushBox(box, playerNum, slot);
+                }
+            });
+        }
+
+        function isColliding(rect1, rect2) {
+            return rect1.x < rect2.x + rect2.width &&
+                   rect1.x + rect1.width > rect2.x &&
+                   rect1.y < rect2.y + rect2.height &&
+                   rect1.y + rect1.height > rect2.y;
+        }
+
+        function pushBox(box, playerNum, slot) {
+            const slotX = parseInt(slot.style.left);
+            const slotY = parseInt(slot.style.top);
+
+            // Move box to slot
+            box.style.left = slotX + 'px';
+            box.style.top = slotY + 'px';
+
+            // Check if answer is correct
+            setTimeout(() => {
+                if (box.dataset.correct === 'true') {
+                    // Correct answer
+                    box.classList.add('correct');
+                    gameState[`player${playerNum}Solved`] = true;
+                    playSound('correct');
+                    
+                    // Check if both players solved
+                    if (gameState.player1Solved && gameState.player2Solved) {
+                        nextLevel();
+                    }
+                } else {
+                    // Wrong answer
+                    box.classList.add('wrong');
+                    playSound('wrong');
+                    
+                    // Reset box position after animation
+                    setTimeout(() => {
+                        box.classList.remove('wrong');
+                        resetBoxPosition(box, playerNum);
+                    }, 500);
+                }
+            }, 100);
+        }
+
+        function resetBoxPosition(box, playerNum) {
+            // Reset to original positions
+            const positions = playerNum === 1 ? 
+                [{x: 100, y: 150}, {x: 150, y: 200}, {x: 100, y: 250}, {x: 50, y: 200}] :
+                [{x: 650, y: 150}, {x: 700, y: 200}, {x: 650, y: 250}, {x: 600, y: 200}];
+            
+            const index = Array.from(box.parentElement.children).indexOf(box) % 4;
+            box.style.left = positions[index].x + 'px';
+            box.style.top = positions[index].y + 'px';
+        }
+
+        function nextLevel() {
+            // Door opening animation
+            document.getElementById('door1').classList.add('opening');
+            document.getElementById('door2').classList.add('opening');
+            
+            playSound('door');
+            showMessage('Level Complete! Doors opening...');
+
+            setTimeout(() => {
+                if (gameState.currentLevel >= gameState.maxLevel) {
+                    // Game completed
+                    endGame(true);
+                } else {
+                    // Next level
+                    gameState.currentLevel++;
+                    gameState.timeLeft = 90;
+                    setupLevel();
+                }
+            }, 2000);
+        }
+
+        function startTimer() {
+            const timerInterval = setInterval(() => {
+                if (!gameState.gameRunning) {
+                    clearInterval(timerInterval);
+                    return;
+                }
+
+                gameState.timeLeft--;
+                document.getElementById('timer').textContent = gameState.timeLeft;
+
+                // Warning at 15 seconds
+                if (gameState.timeLeft <= 15) {
+                    document.getElementById('timer').classList.add('warning');
+                    document.querySelector('.maze-container').classList.add('flash-red');
+                    playSound('warning');
+                    
+                    setTimeout(() => {
+                        document.querySelector('.maze-container').classList.remove('flash-red');
+                    }, 500);
+                }
+
+                // Game over
+                if (gameState.timeLeft <= 0) {
+                    endGame(false);
+                    clearInterval(timerInterval);
+                }
+            }, 1000);
+        }
+
+        function endGame(victory) {
+            gameState.gameRunning = false;
+            
+            if (victory) {
+                const totalTime = Math.floor((Date.now() - gameState.gameStartTime) / 1000);
+                document.getElementById('finalTime').textContent = formatTime(totalTime);
+                saveScore(totalTime);
+                document.getElementById('victory').style.display = 'flex';
+                playSound('victory');
+            } else {
+                document.getElementById('gameOver').style.display = 'flex';
+                playSound('gameOver');
+            }
+        }
+
+        function restartGame() {
+            // Reset game state
+            gameState = {
+                currentLevel: 1,
+                maxLevel: 4,
+                timeLeft: 90,
+                gameStartTime: Date.now(),
+                player1Solved: false,
+                player2Solved: false,
+                gameRunning: true
+            };
+
+            // Hide end screens
+            document.getElementById('gameOver').style.display = 'none';
+            document.getElementById('victory').style.display = 'none';
+            document.getElementById('timer').classList.remove('warning');
+
+            // Show start screen again
+            document.getElementById('startScreen').style.display = 'flex';
+        }
+
+        function showMessage(text) {
+            const msg = document.getElementById('statusMessage');
+            msg.textContent = text;
+            msg.style.display = 'block';
+            
+            setTimeout(() => {
+                msg.style.display = 'none';
+            }, 2000);
+        }
+
+        function playSound(type) {
+            try {
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                
+                let frequency, duration;
+                
+                switch(type) {
+                    case 'correct':
+                        frequency = 800;
+                        duration = 0.3;
+                        break;
+                    case 'wrong':
+                        frequency = 200;
+                        duration = 0.6;
+                        break;
+                    case 'door':
+                        frequency = 400;
+                        duration = 1.2;
+                        break;
+                    case 'warning':
+                        frequency = 1000;
+                        duration = 0.2;
+                        break;
+                    case 'victory':
+                        frequency = 600;
+                        duration = 1.0;
+                        break;
+                    case 'gameOver':
+                        frequency = 150;
+                        duration = 1.2;
+                        break;
+                }
+
+                const oscillator = audioContext.createOscillator();
+                const gainNode = audioContext.createGain();
+                
+                oscillator.connect(gainNode);
+                gainNode.connect(audioContext.destination);
+                
+                oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+                oscillator.type = 'square';
+                
+                gainNode.gain.setValueAtTime(0.1, audioContext.currentTime);
+                gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+                
+                oscillator.start(audioContext.currentTime);
+                oscillator.stop(audioContext.currentTime + duration);
+            } catch (e) {
+                // Audio context not available
+            }
+        }
+
+        function saveScore(time) {
+            let scores = JSON.parse(localStorage.getItem('dbMazeScores') || '[]');
+            scores.push(time);
+            scores.sort((a, b) => a - b);
+            scores = scores.slice(0, 5); // Keep top 5
+            localStorage.setItem('dbMazeScores', JSON.stringify(scores));
+            updateLeaderboard();
+        }
+
+        function loadLeaderboard() {
+            const scores = JSON.parse(localStorage.getItem('dbMazeScores') || '[]');
+            if (scores.length > 0) {
+                document.getElementById('bestTime').textContent = formatTime(scores[0]);
+            }
+            updateLeaderboard();
+        }
+
+        function updateLeaderboard() {
+            const scores = JSON.parse(localStorage.getItem('dbMazeScores') || '[]');
+            const list = document.getElementById('leaderboardList');
+            
+            if (scores.length === 0) {
+                list.innerHTML = '<p>No scores yet!</p>';
+                return;
+            }
+
+            list.innerHTML = scores.map((score, index) => 
+                `<p>${index + 1}. ${formatTime(score)}</p>`
+            ).join('');
+        }
+
+        function formatTime(seconds) {
+            const mins = Math.floor(seconds / 60);
+            const secs = seconds % 60;
+            return `${mins}:${secs.toString().padStart(2, '0')}`;
+        }
+
+        // Load leaderboard on page load
+        loadLeaderboard();
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'980eb6ceb41046c4',t:'MTc1ODE3NjE4MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>

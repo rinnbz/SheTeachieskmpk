@@ -1,0 +1,836 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>The Database Maze of Knowledge</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Orbitron', monospace;
+            background: linear-gradient(135deg, #1a1a2e, #16213e, #0f3460);
+            color: #fff;
+            overflow: hidden;
+            height: 100vh;
+        }
+        
+        .game-container {
+            display: flex;
+            height: 100vh;
+            position: relative;
+        }
+        
+        .maze-container {
+            flex: 1;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            padding: 20px;
+        }
+        
+        .maze {
+            display: grid;
+            grid-template-columns: repeat(10, 35px);
+            grid-template-rows: repeat(10, 35px);
+            gap: 1px;
+            background: #0a0a0a;
+            padding: 10px;
+            border-radius: 10px;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+        }
+        
+        .cell {
+            width: 35px;
+            height: 35px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 16px;
+            border-radius: 4px;
+            transition: all 0.3s ease;
+            position: relative;
+        }
+        
+        .wall {
+            background: linear-gradient(45deg, #2c3e50, #34495e);
+            border: 2px solid #4a6741;
+        }
+        
+        .path {
+            background: linear-gradient(45deg, #1e3c72, #2a5298);
+        }
+        
+        .door {
+            background: linear-gradient(45deg, #8b4513, #a0522d);
+            border: 2px solid #daa520;
+            animation: doorGlow 2s infinite alternate;
+        }
+        
+        .door.unlocked {
+            background: linear-gradient(45deg, #228b22, #32cd32);
+            animation: none;
+        }
+        
+        .treasure {
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            animation: treasureGlow 1.5s infinite alternate;
+        }
+        
+        .player {
+            background: linear-gradient(45deg, #ff6b6b, #ee5a52);
+            border: 2px solid #fff;
+            border-radius: 50%;
+            animation: playerPulse 1s infinite alternate;
+            z-index: 10;
+        }
+        
+        @keyframes doorGlow {
+            0% { box-shadow: 0 0 10px rgba(218, 165, 32, 0.5); }
+            100% { box-shadow: 0 0 20px rgba(218, 165, 32, 0.8); }
+        }
+        
+        @keyframes treasureGlow {
+            0% { box-shadow: 0 0 15px rgba(255, 215, 0, 0.6); }
+            100% { box-shadow: 0 0 30px rgba(255, 215, 0, 1); }
+        }
+        
+        @keyframes playerPulse {
+            0% { transform: scale(0.9); }
+            100% { transform: scale(1.1); }
+        }
+        
+        @keyframes bump {
+            0%, 100% { transform: translate(0, 0); }
+            25% { transform: translate(-5px, 0); }
+            75% { transform: translate(5px, 0); }
+        }
+        
+        .bump-animation {
+            animation: bump 0.3s ease-in-out;
+        }
+        
+        .sidebar {
+            width: 300px;
+            background: rgba(0, 0, 0, 0.8);
+            padding: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 20px;
+            border-left: 2px solid #00ffff;
+        }
+        
+        .game-info {
+            background: rgba(0, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+            border: 1px solid #00ffff;
+        }
+        
+        .game-info h2 {
+            color: #00ffff;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        
+        .stat {
+            display: flex;
+            justify-content: space-between;
+            margin: 8px 0;
+            font-size: 14px;
+        }
+        
+        .controls {
+            background: rgba(255, 255, 255, 0.1);
+            padding: 15px;
+            border-radius: 10px;
+        }
+        
+        .controls h3 {
+            color: #ffd700;
+            margin-bottom: 10px;
+        }
+        
+        .btn {
+            background: linear-gradient(45deg, #667eea, #764ba2);
+            border: none;
+            color: white;
+            padding: 10px 15px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-family: 'Orbitron', monospace;
+            font-weight: bold;
+            transition: all 0.3s ease;
+            margin: 5px 0;
+            width: 100%;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.4);
+        }
+        
+        .question-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.9);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .question-content {
+            background: linear-gradient(135deg, #1e3c72, #2a5298);
+            padding: 30px;
+            border-radius: 15px;
+            max-width: 500px;
+            width: 90%;
+            border: 2px solid #00ffff;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.5);
+        }
+        
+        .question-content h3 {
+            color: #ffd700;
+            margin-bottom: 20px;
+            text-align: center;
+        }
+        
+        .question-text {
+            font-size: 16px;
+            margin-bottom: 20px;
+            line-height: 1.5;
+        }
+        
+        .answer-option {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid #00ffff;
+            color: white;
+            padding: 12px;
+            margin: 8px 0;
+            border-radius: 8px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Orbitron', monospace;
+        }
+        
+        .answer-option:hover {
+            background: rgba(0, 255, 255, 0.2);
+            transform: translateX(5px);
+        }
+        
+        .answer-option.correct {
+            background: rgba(34, 139, 34, 0.8);
+            border-color: #32cd32;
+        }
+        
+        .answer-option.wrong {
+            background: rgba(220, 20, 60, 0.8);
+            border-color: #ff6b6b;
+        }
+        
+        .hint {
+            background: rgba(255, 215, 0, 0.1);
+            border: 1px solid #ffd700;
+            padding: 10px;
+            border-radius: 5px;
+            margin: 10px 0;
+            font-size: 14px;
+            color: #ffd700;
+        }
+        
+        .story-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        
+        .story-content {
+            background: linear-gradient(135deg, #1a1a2e, #16213e);
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 600px;
+            width: 90%;
+            text-align: center;
+            border: 3px solid #ffd700;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.3);
+        }
+        
+        .story-content h1 {
+            color: #ffd700;
+            font-size: 28px;
+            margin-bottom: 20px;
+            text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+        }
+        
+        .story-content p {
+            font-size: 16px;
+            line-height: 1.6;
+            margin-bottom: 15px;
+        }
+        
+        .hearts {
+            display: flex;
+            gap: 5px;
+            align-items: center;
+        }
+        
+        .heart {
+            color: #ff6b6b;
+            font-size: 18px;
+        }
+        
+        .heart.lost {
+            color: #666;
+        }
+        
+        .game-over-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        
+        .game-over-content {
+            background: linear-gradient(135deg, #8b0000, #dc143c);
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            border: 3px solid #ff6b6b;
+            box-shadow: 0 0 50px rgba(255, 107, 107, 0.3);
+        }
+        
+        .win-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.95);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 2000;
+        }
+        
+        .win-content {
+            background: linear-gradient(135deg, #ffd700, #ffed4e);
+            color: #000;
+            padding: 40px;
+            border-radius: 20px;
+            max-width: 500px;
+            width: 90%;
+            text-align: center;
+            border: 3px solid #fff;
+            box-shadow: 0 0 50px rgba(255, 215, 0, 0.8);
+            animation: treasureGlow 2s infinite alternate;
+        }
+    </style>
+</head>
+<body>
+    <!-- Story Introduction Modal -->
+    <div id="storyModal" class="story-modal">
+        <div class="story-content">
+            <h1>🏰 The Database Maze of Knowledge</h1>
+            <p>You are <strong>Alex, a young data explorer</strong>, venturing into the legendary <strong>Maze of Knowledge</strong>.</p>
+            <p>Legends say the maze holds the <strong>"Treasure of Infinite Data"</strong>, guarded by ancient doors locked with database wisdom.</p>
+            <p>To escape and claim the treasure, you must:</p>
+            <p>🔑 Answer database questions to unlock doors<br>
+            🚫 Avoid bumping into walls (5 bumps = hospital trip!)<br>
+            🏃 Reach the treasure within your step limit</p>
+            <button class="btn" onclick="startGame()">Begin Your Adventure! 🎮</button>
+        </div>
+    </div>
+
+    <!-- Game Over Modal -->
+    <div id="gameOverModal" class="game-over-modal">
+        <div class="game-over-content">
+            <h1>💀 Game Over</h1>
+            <p id="gameOverMessage">You are lost in the maze forever...</p>
+            <button class="btn" onclick="restartGame()">Try Again 🔄</button>
+        </div>
+    </div>
+
+    <!-- Win Modal -->
+    <div id="winModal" class="win-modal">
+        <div class="win-content">
+            <h1>🏆 Victory!</h1>
+            <p>Congratulations, Alex! You've found the <strong>Treasure of Infinite Data</strong>!</p>
+            <p>Your database knowledge has proven worthy of the ancient wisdom!</p>
+            <p id="winStats"></p>
+            <button class="btn" onclick="restartGame()">Play Again 🎮</button>
+        </div>
+    </div>
+
+    <!-- Question Modal -->
+    <div id="questionModal" class="question-modal">
+        <div class="question-content">
+            <h3>🔐 Database Challenge</h3>
+            <div id="questionText" class="question-text"></div>
+            <div id="answerOptions"></div>
+            <div id="hintText" class="hint" style="display: none;"></div>
+            <button class="btn" onclick="showHint()" id="hintBtn">💡 Show Hint</button>
+        </div>
+    </div>
+
+    <div class="game-container">
+        <div class="maze-container">
+            <div id="maze" class="maze"></div>
+        </div>
+        
+        <div class="sidebar">
+            <div class="game-info">
+                <h2>🎮 Game Status</h2>
+                <div class="stat">
+                    <span>Steps Remaining:</span>
+                    <span id="stepsCount">100</span>
+                </div>
+                <div class="stat">
+                    <span>Hearts:</span>
+                    <div id="heartsDisplay" class="hearts">
+                        <span class="heart">❤️</span>
+                        <span class="heart">❤️</span>
+                        <span class="heart">❤️</span>
+                        <span class="heart">❤️</span>
+                        <span class="heart">❤️</span>
+                    </div>
+                </div>
+                <div class="stat">
+                    <span>Doors Unlocked:</span>
+                    <span id="doorsCount">0/6</span>
+                </div>
+            </div>
+            
+            <div class="controls">
+                <h3>🎯 Controls</h3>
+                <p style="font-size: 12px; margin-bottom: 15px;">Use WASD or Arrow Keys to move Alex through the maze!</p>
+                <button class="btn" onclick="restartGame()">🔄 Restart Game</button>
+                <button class="btn" onclick="showStory()">📖 Show Story</button>
+            </div>
+            
+            <div class="game-info">
+                <h2>🗺️ Legend</h2>
+                <div style="font-size: 12px; line-height: 1.6;">
+                    <p>🔴 Alex (You)</p>
+                    <p>🟫 Walls</p>
+                    <p>🟦 Paths</p>
+                    <p>🟨 Locked Doors</p>
+                    <p>🟩 Unlocked Doors</p>
+                    <p>💰 Treasure</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let gameState = {
+            playerX: 0,
+            playerY: 0,
+            steps: 100,
+            hearts: 5,
+            wallBumps: 0,
+            doorsUnlocked: 0,
+            currentQuestion: null,
+            gameWon: false,
+            gameOver: false
+        };
+
+        // Maze layout (0=wall, 1=path, 2=door, 3=treasure)
+        // Complex maze with multiple mandatory doors - NO direct path to treasure!
+        const mazeLayout = [
+            [1, 1, 0, 2, 0, 0, 1, 1, 0, 0],
+            [0, 1, 0, 1, 0, 0, 1, 0, 0, 0],
+            [0, 1, 1, 1, 1, 1, 1, 0, 2, 0],
+            [0, 0, 0, 2, 0, 0, 1, 0, 1, 0],
+            [0, 1, 1, 1, 0, 0, 1, 1, 1, 0],
+            [0, 1, 0, 0, 0, 2, 0, 0, 1, 0],
+            [0, 1, 1, 1, 1, 1, 0, 0, 1, 0],
+            [0, 0, 0, 2, 0, 1, 1, 1, 1, 0],
+            [0, 1, 1, 1, 0, 0, 0, 2, 0, 0],
+            [0, 1, 0, 1, 1, 1, 1, 1, 1, 3]
+        ];
+
+        // Door states (false = locked, true = unlocked)
+        // All doors must be unlocked to reach treasure - no shortcuts!
+        let doorStates = {
+            '3,0': false,  // Door 1 - Entry gate
+            '8,2': false,  // Door 2 - Upper passage
+            '3,3': false,  // Door 3 - Central corridor
+            '5,5': false,  // Door 4 - Lower junction
+            '3,7': false,  // Door 5 - Deep passage
+            '7,8': false   // Door 6 - Final gate to treasure
+        };
+
+        // Database questions - 6 challenging questions for 6 doors
+        const questions = [
+            {
+                question: "What uniquely identifies a row in a table?",
+                options: ["A: Foreign Key", "B: Primary Key", "C: Index", "D: Column"],
+                correct: 1,
+                hint: "Think about what makes each row different from all others..."
+            },
+            {
+                question: "Which SQL keyword retrieves data from a database?",
+                options: ["A: GET", "B: FETCH", "C: SELECT", "D: PULL"],
+                correct: 2,
+                hint: "This keyword is used in almost every database query to choose data..."
+            },
+            {
+                question: "What does DBMS stand for?",
+                options: ["A: Data Backup Management System", "B: Database Management System", "C: Digital Binary Mapping Storage", "D: Document Base Model Software"],
+                correct: 1,
+                hint: "It's the software that manages and organizes databases..."
+            },
+            {
+                question: "In relational databases, links between tables are made using:",
+                options: ["A: Index", "B: Foreign Key", "C: Primary Key", "D: Attribute"],
+                correct: 1,
+                hint: "This key references the primary key of another table..."
+            },
+            {
+                question: "Which command permanently deletes a table?",
+                options: ["A: ERASE TABLE", "B: DROP TABLE", "C: DELETE", "D: REMOVE"],
+                correct: 1,
+                hint: "This command completely removes the table structure, not just the data..."
+            },
+            {
+                question: "What does ACID stand for in database transactions?",
+                options: ["A: Atomic, Consistent, Isolated, Durable", "B: Advanced, Complete, Integrated, Dynamic", "C: Accurate, Controlled, Independent, Detailed", "D: Active, Centralized, Indexed, Distributed"],
+                correct: 0,
+                hint: "These are the four key properties that guarantee database transaction reliability..."
+            }
+        ];
+
+        function initGame() {
+            gameState = {
+                playerX: 0,
+                playerY: 0,
+                steps: 100,
+                hearts: 5,
+                wallBumps: 0,
+                doorsUnlocked: 0,
+                currentQuestion: null,
+                gameWon: false,
+                gameOver: false
+            };
+            
+            doorStates = {
+                '3,0': false,
+                '8,2': false,
+                '3,3': false,
+                '5,5': false,
+                '3,7': false,
+                '7,8': false
+            };
+            
+            createMaze();
+            updateUI();
+            
+            // Add keyboard event listeners
+            document.addEventListener('keydown', handleKeyPress);
+        }
+
+        function createMaze() {
+            const maze = document.getElementById('maze');
+            maze.innerHTML = '';
+            
+            for (let y = 0; y < mazeLayout.length; y++) {
+                for (let x = 0; x < mazeLayout[y].length; x++) {
+                    const cell = document.createElement('div');
+                    cell.className = 'cell';
+                    cell.id = `cell-${x}-${y}`;
+                    
+                    const cellType = mazeLayout[y][x];
+                    
+                    if (cellType === 0) {
+                        cell.classList.add('wall');
+                    } else if (cellType === 1) {
+                        cell.classList.add('path');
+                    } else if (cellType === 2) {
+                        const doorKey = `${x},${y}`;
+                        if (doorStates[doorKey]) {
+                            cell.classList.add('door', 'unlocked');
+                            cell.textContent = '✅';
+                        } else {
+                            cell.classList.add('door');
+                            cell.textContent = '❓';
+                        }
+                    } else if (cellType === 3) {
+                        cell.classList.add('treasure');
+                        cell.textContent = '💰';
+                    }
+                    
+                    // Add player
+                    if (x === gameState.playerX && y === gameState.playerY) {
+                        cell.classList.add('player');
+                        cell.textContent = '🔴';
+                    }
+                    
+                    maze.appendChild(cell);
+                }
+            }
+        }
+
+        function handleKeyPress(event) {
+            if (gameState.gameOver || gameState.gameWon) return;
+            
+            let newX = gameState.playerX;
+            let newY = gameState.playerY;
+            
+            switch(event.key.toLowerCase()) {
+                case 'w':
+                case 'arrowup':
+                    newY = Math.max(0, gameState.playerY - 1);
+                    break;
+                case 's':
+                case 'arrowdown':
+                    newY = Math.min(mazeLayout.length - 1, gameState.playerY + 1);
+                    break;
+                case 'a':
+                case 'arrowleft':
+                    newX = Math.max(0, gameState.playerX - 1);
+                    break;
+                case 'd':
+                case 'arrowright':
+                    newX = Math.min(mazeLayout[0].length - 1, gameState.playerX + 1);
+                    break;
+                default:
+                    return;
+            }
+            
+            event.preventDefault();
+            movePlayer(newX, newY);
+        }
+
+        function movePlayer(newX, newY) {
+            const cellType = mazeLayout[newY][newX];
+            
+            // Check for wall collision
+            if (cellType === 0) {
+                handleWallCollision();
+                return;
+            }
+            
+            // Check for locked door
+            if (cellType === 2) {
+                const doorKey = `${newX},${newY}`;
+                if (!doorStates[doorKey]) {
+                    showQuestion(doorKey);
+                    return;
+                }
+            }
+            
+            // Valid move
+            gameState.playerX = newX;
+            gameState.playerY = newY;
+            gameState.steps--;
+            gameState.wallBumps = 0; // Reset wall bump counter on successful move
+            
+            // Check for treasure
+            if (cellType === 3) {
+                winGame();
+                return;
+            }
+            
+            // Check for game over (no steps)
+            if (gameState.steps <= 0) {
+                gameOver("You ran out of steps! Alex is lost in the maze forever...");
+                return;
+            }
+            
+            createMaze();
+            updateUI();
+        }
+
+        function handleWallCollision() {
+            gameState.wallBumps++;
+            gameState.hearts--;
+            
+            // Add bump animation
+            const playerCell = document.getElementById(`cell-${gameState.playerX}-${gameState.playerY}`);
+            playerCell.classList.add('bump-animation');
+            setTimeout(() => {
+                playerCell.classList.remove('bump-animation');
+            }, 300);
+            
+            // Play thud sound effect (visual feedback)
+            playerCell.style.background = 'rgba(255, 0, 0, 0.5)';
+            setTimeout(() => {
+                createMaze();
+            }, 200);
+            
+            if (gameState.hearts <= 0) {
+                gameOver("Alex bumped into too many walls and fainted! 🏥 He was rescued and taken to the hospital. Try again!");
+            }
+            
+            updateUI();
+        }
+
+        function showQuestion(doorKey) {
+            const questionIndex = Object.keys(doorStates).indexOf(doorKey);
+            gameState.currentQuestion = {
+                doorKey: doorKey,
+                question: questions[questionIndex],
+                answered: false
+            };
+            
+            const modal = document.getElementById('questionModal');
+            const questionText = document.getElementById('questionText');
+            const answerOptions = document.getElementById('answerOptions');
+            const hintText = document.getElementById('hintText');
+            const hintBtn = document.getElementById('hintBtn');
+            
+            questionText.textContent = gameState.currentQuestion.question.question;
+            
+            answerOptions.innerHTML = '';
+            gameState.currentQuestion.question.options.forEach((option, index) => {
+                const button = document.createElement('button');
+                button.className = 'answer-option';
+                button.textContent = option;
+                button.onclick = () => answerQuestion(index);
+                answerOptions.appendChild(button);
+            });
+            
+            hintText.style.display = 'none';
+            hintBtn.style.display = 'block';
+            
+            modal.style.display = 'flex';
+        }
+
+        function answerQuestion(selectedIndex) {
+            if (gameState.currentQuestion.answered) return;
+            
+            const question = gameState.currentQuestion.question;
+            const options = document.querySelectorAll('.answer-option');
+            
+            gameState.currentQuestion.answered = true;
+            
+            if (selectedIndex === question.correct) {
+                // Correct answer
+                options[selectedIndex].classList.add('correct');
+                
+                setTimeout(() => {
+                    // Unlock door
+                    doorStates[gameState.currentQuestion.doorKey] = true;
+                    gameState.doorsUnlocked++;
+                    
+                    // Move player through the door
+                    const [x, y] = gameState.currentQuestion.doorKey.split(',').map(Number);
+                    gameState.playerX = x;
+                    gameState.playerY = y;
+                    gameState.steps--;
+                    
+                    document.getElementById('questionModal').style.display = 'none';
+                    createMaze();
+                    updateUI();
+                }, 1500);
+            } else {
+                // Wrong answer
+                options[selectedIndex].classList.add('wrong');
+                options[question.correct].classList.add('correct');
+                
+                setTimeout(() => {
+                    document.getElementById('questionModal').style.display = 'none';
+                }, 2000);
+            }
+        }
+
+        function showHint() {
+            const hintText = document.getElementById('hintText');
+            const hintBtn = document.getElementById('hintBtn');
+            
+            hintText.textContent = gameState.currentQuestion.question.hint;
+            hintText.style.display = 'block';
+            hintBtn.style.display = 'none';
+        }
+
+        function updateUI() {
+            document.getElementById('stepsCount').textContent = gameState.steps;
+            document.getElementById('doorsCount').textContent = `${gameState.doorsUnlocked}/6`;
+            
+            // Update hearts display
+            const heartsDisplay = document.getElementById('heartsDisplay');
+            heartsDisplay.innerHTML = '';
+            for (let i = 0; i < 5; i++) {
+                const heart = document.createElement('span');
+                heart.className = i < gameState.hearts ? 'heart' : 'heart lost';
+                heart.textContent = '❤️';
+                heartsDisplay.appendChild(heart);
+            }
+        }
+
+        function winGame() {
+            gameState.gameWon = true;
+            const winModal = document.getElementById('winModal');
+            const winStats = document.getElementById('winStats');
+            
+            winStats.innerHTML = `
+                <strong>Final Stats:</strong><br>
+                Steps Used: ${100 - gameState.steps}<br>
+                Hearts Remaining: ${gameState.hearts}<br>
+                Doors Unlocked: ${gameState.doorsUnlocked}/6
+            `;
+            
+            winModal.style.display = 'flex';
+        }
+
+        function gameOver(message) {
+            gameState.gameOver = true;
+            const modal = document.getElementById('gameOverModal');
+            const messageEl = document.getElementById('gameOverMessage');
+            
+            messageEl.textContent = message;
+            modal.style.display = 'flex';
+        }
+
+        function startGame() {
+            document.getElementById('storyModal').style.display = 'none';
+            initGame();
+        }
+
+        function showStory() {
+            document.getElementById('storyModal').style.display = 'flex';
+        }
+
+        function restartGame() {
+            document.getElementById('gameOverModal').style.display = 'none';
+            document.getElementById('winModal').style.display = 'none';
+            document.getElementById('questionModal').style.display = 'none';
+            initGame();
+        }
+
+        // Initialize the game when page loads
+        window.onload = function() {
+            // Show story modal on start
+            document.getElementById('storyModal').style.display = 'flex';
+        };
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'980eb41eb1d0da55',t:'MTc1ODE3NjA3MS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
+
+

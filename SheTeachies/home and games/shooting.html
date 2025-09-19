@@ -1,0 +1,839 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Database Rocket Quest</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Orbitron:wght@400;700;900&display=swap');
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Orbitron', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #00ffff;
+            overflow: hidden;
+            height: 100vh;
+            position: relative;
+        }
+
+        /* Animated background grid */
+        .grid-bg {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                linear-gradient(rgba(0, 255, 255, 0.1) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(0, 255, 255, 0.1) 1px, transparent 1px);
+            background-size: 50px 50px;
+            animation: gridMove 20s linear infinite;
+            z-index: 1;
+        }
+
+        @keyframes gridMove {
+            0% { transform: translate(0, 0); }
+            100% { transform: translate(50px, 50px); }
+        }
+
+        .game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            z-index: 2;
+        }
+
+        .hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            right: 20px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            z-index: 10;
+        }
+
+        .hearts {
+            display: flex;
+            gap: 10px;
+        }
+
+        .heart {
+            width: 30px;
+            height: 30px;
+            position: relative;
+            animation: heartbeat 2s ease-in-out infinite;
+        }
+
+        .heart::before,
+        .heart::after {
+            content: '';
+            width: 15px;
+            height: 20px;
+            position: absolute;
+            background: #ff0040;
+            border-radius: 15px 15px 0 0;
+            box-shadow: 0 0 15px rgba(255, 0, 64, 0.5);
+        }
+
+        .heart::before {
+            left: 15px;
+            transform: rotate(-45deg);
+            transform-origin: 0 100%;
+        }
+
+        .heart::after {
+            left: 0;
+            transform: rotate(45deg);
+            transform-origin: 100% 100%;
+        }
+
+        @keyframes heartbeat {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+
+        .score-info {
+            text-align: right;
+        }
+
+        .score, .high-score {
+            font-size: 18px;
+            font-weight: 700;
+            text-shadow: 0 0 10px currentColor;
+        }
+
+        .question-display {
+            position: absolute;
+            top: 80px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: rgba(0, 20, 40, 0.9);
+            border: 2px solid #00ffff;
+            border-radius: 15px;
+            padding: 20px 30px;
+            max-width: 80%;
+            text-align: center;
+            font-size: 20px;
+            font-weight: 700;
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.3);
+            z-index: 5;
+        }
+
+        .timer {
+            position: absolute;
+            top: 160px;
+            left: 50%;
+            transform: translateX(-50%);
+            font-size: 24px;
+            font-weight: 900;
+            color: #ffff00;
+            text-shadow: 0 0 15px currentColor;
+            z-index: 5;
+        }
+
+        .rocket {
+            position: absolute;
+            bottom: 50px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 80px;
+            z-index: 4;
+            transition: left 0.1s ease;
+        }
+
+        .rocket svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 15px #00ffff);
+        }
+
+        .thruster {
+            position: absolute;
+            bottom: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 20px;
+            height: 30px;
+            background: linear-gradient(to top, #ff4500, #ffff00, #ff4500);
+            border-radius: 50% 50% 50% 50% / 60% 60% 40% 40%;
+            animation: thrusterFlame 0.1s ease-in-out infinite alternate;
+        }
+
+        @keyframes thrusterFlame {
+            0% { transform: translateX(-50%) scaleY(1); }
+            100% { transform: translateX(-50%) scaleY(1.3); }
+        }
+
+        .balloon {
+            position: absolute;
+            width: 120px;
+            height: 140px;
+            cursor: pointer;
+            z-index: 3;
+            animation: balloonFloat 3s ease-in-out infinite;
+        }
+
+        @keyframes balloonFloat {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-10px); }
+        }
+
+        .balloon svg {
+            width: 100%;
+            height: 100%;
+            filter: drop-shadow(0 0 10px rgba(0, 255, 255, 0.5));
+        }
+
+        .balloon-text {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            font-size: 14px;
+            font-weight: 700;
+            text-align: center;
+            color: #ffffff;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.8);
+            max-width: 80px;
+            line-height: 1.2;
+        }
+
+        .bullet {
+            position: absolute;
+            width: 6px;
+            height: 15px;
+            background: linear-gradient(to top, #00ffff, #ffffff);
+            border-radius: 3px;
+            box-shadow: 0 0 10px #00ffff;
+            z-index: 3;
+        }
+
+        .explosion {
+            position: absolute;
+            width: 100px;
+            height: 100px;
+            border-radius: 50%;
+            z-index: 6;
+            pointer-events: none;
+        }
+
+        .explosion.correct {
+            background: radial-gradient(circle, #00ff00, transparent);
+            animation: correctExplosion 0.5s ease-out;
+        }
+
+        .explosion.wrong {
+            background: radial-gradient(circle, #ff0000, transparent);
+            animation: wrongExplosion 0.5s ease-out;
+        }
+
+        @keyframes correctExplosion {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(3); opacity: 0; }
+        }
+
+        @keyframes wrongExplosion {
+            0% { transform: scale(0); opacity: 1; }
+            100% { transform: scale(2); opacity: 0; }
+        }
+
+        .game-over {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(0, 20, 40, 0.95);
+            border: 3px solid #00ffff;
+            border-radius: 20px;
+            padding: 40px;
+            text-align: center;
+            z-index: 20;
+            box-shadow: 0 0 50px rgba(0, 255, 255, 0.5);
+        }
+
+        .game-over h2 {
+            font-size: 36px;
+            margin-bottom: 20px;
+            color: #00ffff;
+            text-shadow: 0 0 20px currentColor;
+        }
+
+        .game-over p {
+            font-size: 18px;
+            margin: 10px 0;
+        }
+
+        .restart-btn {
+            background: linear-gradient(45deg, #00ffff, #0080ff);
+            border: none;
+            color: white;
+            padding: 15px 30px;
+            font-size: 18px;
+            font-family: 'Orbitron', monospace;
+            font-weight: 700;
+            border-radius: 10px;
+            cursor: pointer;
+            margin-top: 20px;
+            transition: all 0.3s ease;
+            box-shadow: 0 0 20px rgba(0, 255, 255, 0.3);
+        }
+
+        .restart-btn:hover {
+            transform: scale(1.05);
+            box-shadow: 0 0 30px rgba(0, 255, 255, 0.6);
+        }
+
+        .controls {
+            position: absolute;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            text-align: center;
+            font-size: 14px;
+            color: rgba(255, 255, 255, 0.7);
+            z-index: 5;
+        }
+
+        .reward-popup {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: linear-gradient(45deg, #ffd700, #ffed4e);
+            color: #000;
+            padding: 20px;
+            border-radius: 15px;
+            font-size: 18px;
+            font-weight: 700;
+            text-align: center;
+            z-index: 15;
+            box-shadow: 0 0 30px rgba(255, 215, 0, 0.8);
+            animation: rewardPulse 0.5s ease-in-out;
+        }
+
+        @keyframes rewardPulse {
+            0%, 100% { transform: translate(-50%, -50%) scale(1); }
+            50% { transform: translate(-50%, -50%) scale(1.1); }
+        }
+    </style>
+</head>
+<body>
+    <div class="grid-bg"></div>
+    
+    <div class="game-container">
+        <div class="hud">
+            <div class="hearts" id="hearts"></div>
+            <div class="score-info">
+                <div class="score">Score: <span id="score">0</span></div>
+                <div class="high-score">Best: <span id="highScore">0</span></div>
+            </div>
+        </div>
+
+        <div class="question-display" id="questionDisplay"></div>
+        <div class="timer" id="timer">60</div>
+
+        <div class="rocket" id="rocket">
+            <svg viewBox="0 0 60 80">
+                <defs>
+                    <linearGradient id="rocketGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                        <stop offset="0%" style="stop-color:#00ffff"/>
+                        <stop offset="50%" style="stop-color:#0080ff"/>
+                        <stop offset="100%" style="stop-color:#004080"/>
+                    </linearGradient>
+                </defs>
+                <path d="M30 5 L45 25 L40 70 L20 70 L15 25 Z" fill="url(#rocketGradient)" stroke="#00ffff" stroke-width="2"/>
+                <circle cx="30" cy="20" r="8" fill="#ffff00" opacity="0.8"/>
+                <rect x="25" y="35" width="10" height="20" fill="#00ffff" opacity="0.6"/>
+            </svg>
+            <div class="thruster"></div>
+        </div>
+
+        <div class="controls">
+            ← → Arrow Keys to Move | SPACEBAR to Fire
+        </div>
+    </div>
+
+    <script>
+        // Game state
+        let gameState = {
+            currentQuestionIndex: 0,
+            score: 0,
+            hearts: 3,
+            timeLeft: 60,
+            gameActive: true,
+            rocketPosition: 50, // percentage
+            bullets: [],
+            balloons: [],
+            timer: null,
+            questionTimer: null,
+            rewardActive: false
+        };
+
+        // Database questions
+        const questions = [
+            {
+                question: "Which uniquely identifies each record in a table?",
+                answers: ["Foreign Key", "Primary Key", "Index", "Attribute"],
+                correct: 1
+            },
+            {
+                question: "Which SQL statement retrieves data?",
+                answers: ["UPDATE", "SELECT", "DELETE", "INSERT"],
+                correct: 1
+            },
+            {
+                question: "What does DBMS stand for?",
+                answers: ["Data Backup Management System", "Database Management System", "Data Binary Model Storage", "Document Based Mapping Service"],
+                correct: 1
+            },
+            {
+                question: "In relational databases, relationships are created using:",
+                answers: ["Foreign Key", "Duplicate Values", "Primary Attribute", "Column Index"],
+                correct: 0
+            },
+            {
+                question: "Which SQL command removes a table permanently?",
+                answers: ["ERASE TABLE", "REMOVE TABLE", "DROP TABLE", "DELETE TABLE"],
+                correct: 2
+            }
+        ];
+
+        // Audio context for sound effects
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+
+        function playSound(frequency, duration, type = 'sine') {
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            oscillator.frequency.setValueAtTime(frequency, audioContext.currentTime);
+            oscillator.type = type;
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + duration);
+            
+            oscillator.start(audioContext.currentTime);
+            oscillator.stop(audioContext.currentTime + duration);
+        }
+
+        function initGame() {
+            console.log("Initializing Database Rocket Quest");
+            gameState.currentQuestionIndex = 0;
+            gameState.score = 0;
+            gameState.hearts = 3;
+            gameState.gameActive = true;
+            gameState.rewardActive = false;
+            
+            updateHUD();
+            loadHighScore();
+            showQuestion();
+            startGameLoop();
+        }
+
+        function updateHUD() {
+            // Update hearts
+            const heartsContainer = document.getElementById('hearts');
+            heartsContainer.innerHTML = '';
+            for (let i = 0; i < gameState.hearts; i++) {
+                const heart = document.createElement('div');
+                heart.className = 'heart';
+                heartsContainer.appendChild(heart);
+            }
+
+            // Update score
+            document.getElementById('score').textContent = gameState.score;
+        }
+
+        function loadHighScore() {
+            const highScore = localStorage.getItem('rocketQuestHighScore') || 0;
+            document.getElementById('highScore').textContent = highScore;
+        }
+
+        function saveHighScore() {
+            const currentHigh = parseInt(localStorage.getItem('rocketQuestHighScore') || 0);
+            if (gameState.score > currentHigh) {
+                localStorage.setItem('rocketQuestHighScore', gameState.score);
+                document.getElementById('highScore').textContent = gameState.score;
+            }
+        }
+
+        function showQuestion() {
+            if (gameState.currentQuestionIndex >= questions.length) {
+                endGame();
+                return;
+            }
+
+            console.log("Now showing Q", gameState.currentQuestionIndex);
+            
+            // Clear existing balloons and bullets
+            clearBalloons();
+            clearBullets();
+            
+            const currentQ = questions[gameState.currentQuestionIndex];
+            document.getElementById('questionDisplay').textContent = currentQ.question;
+            
+            // Reset timer
+            gameState.timeLeft = 60;
+            startQuestionTimer();
+            
+            // Create balloons after a short delay
+            setTimeout(() => {
+                createBalloons(currentQ);
+            }, 500);
+        }
+
+        function createBalloons(question) {
+            const positions = [15, 35, 55, 75]; // Percentage positions
+            
+            question.answers.forEach((answer, index) => {
+                const balloon = document.createElement('div');
+                balloon.className = 'balloon';
+                balloon.style.left = positions[index] + '%';
+                balloon.style.top = '250px';
+                balloon.dataset.answerIndex = index;
+                
+                balloon.innerHTML = `
+                    <svg viewBox="0 0 120 140">
+                        <defs>
+                            <linearGradient id="balloonGrad${index}" x1="0%" y1="0%" x2="100%" y2="100%">
+                                <stop offset="0%" style="stop-color:rgba(0,255,255,0.8)"/>
+                                <stop offset="100%" style="stop-color:rgba(0,128,255,0.6)"/>
+                            </linearGradient>
+                        </defs>
+                        <ellipse cx="60" cy="60" rx="50" ry="60" fill="url(#balloonGrad${index})" stroke="#00ffff" stroke-width="2"/>
+                        <line x1="60" y1="120" x2="60" y2="135" stroke="#00ffff" stroke-width="2"/>
+                    </svg>
+                    <div class="balloon-text">${answer}</div>
+                `;
+                
+                document.querySelector('.game-container').appendChild(balloon);
+                gameState.balloons.push(balloon);
+            });
+        }
+
+        function clearBalloons() {
+            gameState.balloons.forEach(balloon => {
+                if (balloon.parentNode) {
+                    balloon.parentNode.removeChild(balloon);
+                }
+            });
+            gameState.balloons = [];
+        }
+
+        function clearBullets() {
+            gameState.bullets.forEach(bullet => {
+                if (bullet.parentNode) {
+                    bullet.parentNode.removeChild(bullet);
+                }
+            });
+            gameState.bullets = [];
+        }
+
+        function startQuestionTimer() {
+            if (gameState.questionTimer) {
+                clearInterval(gameState.questionTimer);
+            }
+            
+            gameState.questionTimer = setInterval(() => {
+                gameState.timeLeft--;
+                document.getElementById('timer').textContent = gameState.timeLeft;
+                
+                if (gameState.timeLeft <= 0) {
+                    clearInterval(gameState.questionTimer);
+                    handleWrongAnswer();
+                }
+            }, 1000);
+        }
+
+        function handleCorrectAnswer(balloon) {
+            console.log("Correct answer!");
+            clearInterval(gameState.questionTimer);
+            
+            // Create explosion effect
+            createExplosion(balloon, 'correct');
+            playSound(800, 0.3);
+            
+            // Award points
+            const basePoints = 10;
+            const timeBonus = Math.floor(gameState.timeLeft / 10);
+            const totalPoints = basePoints + timeBonus;
+            gameState.score += totalPoints;
+            
+            // Check for first-try bonus
+            if (gameState.timeLeft > 50) {
+                gameState.score += 10;
+                showReward("First Try Bonus! +10");
+            }
+            
+            updateHUD();
+            
+            // Move to next question
+            gameState.currentQuestionIndex++;
+            
+            setTimeout(() => {
+                if (gameState.currentQuestionIndex >= questions.length) {
+                    endGame();
+                } else {
+                    showQuestion();
+                }
+            }, 2000);
+        }
+
+        function handleWrongAnswer() {
+            console.log("Wrong answer or timeout");
+            clearInterval(gameState.questionTimer);
+            
+            playSound(200, 0.5, 'sawtooth');
+            
+            gameState.hearts--;
+            updateHUD();
+            
+            if (gameState.hearts <= 0) {
+                endGame();
+            } else {
+                // Reload same question
+                setTimeout(() => {
+                    showQuestion();
+                }, 2000);
+            }
+        }
+
+        function createExplosion(element, type) {
+            const explosion = document.createElement('div');
+            explosion.className = `explosion ${type}`;
+            
+            const rect = element.getBoundingClientRect();
+            const container = document.querySelector('.game-container');
+            const containerRect = container.getBoundingClientRect();
+            
+            explosion.style.left = (rect.left - containerRect.left + rect.width/2 - 50) + 'px';
+            explosion.style.top = (rect.top - containerRect.top + rect.height/2 - 50) + 'px';
+            
+            container.appendChild(explosion);
+            
+            setTimeout(() => {
+                if (explosion.parentNode) {
+                    explosion.parentNode.removeChild(explosion);
+                }
+            }, 500);
+        }
+
+        function showReward(message) {
+            const popup = document.createElement('div');
+            popup.className = 'reward-popup';
+            popup.textContent = message;
+            
+            document.querySelector('.game-container').appendChild(popup);
+            
+            setTimeout(() => {
+                if (popup.parentNode) {
+                    popup.parentNode.removeChild(popup);
+                }
+            }, 2000);
+        }
+
+        function fireBullet() {
+            if (!gameState.gameActive) return;
+            
+            const bullet = document.createElement('div');
+            bullet.className = 'bullet';
+            
+            const rocket = document.getElementById('rocket');
+            const rocketRect = rocket.getBoundingClientRect();
+            const container = document.querySelector('.game-container');
+            const containerRect = container.getBoundingClientRect();
+            
+            bullet.style.left = (rocketRect.left - containerRect.left + rocketRect.width/2 - 3) + 'px';
+            bullet.style.bottom = '130px';
+            
+            container.appendChild(bullet);
+            gameState.bullets.push(bullet);
+            
+            playSound(1000, 0.1);
+        }
+
+        function updateBullets() {
+            gameState.bullets.forEach((bullet, bulletIndex) => {
+                if (!bullet.parentNode) return;
+                
+                const currentBottom = parseInt(bullet.style.bottom);
+                const newBottom = currentBottom + 8;
+                
+                if (newBottom > window.innerHeight) {
+                    bullet.parentNode.removeChild(bullet);
+                    gameState.bullets.splice(bulletIndex, 1);
+                    return;
+                }
+                
+                bullet.style.bottom = newBottom + 'px';
+                
+                // Check collision with balloons
+                gameState.balloons.forEach((balloon, balloonIndex) => {
+                    if (checkCollision(bullet, balloon)) {
+                        // Remove bullet
+                        bullet.parentNode.removeChild(bullet);
+                        gameState.bullets.splice(bulletIndex, 1);
+                        
+                        // Check if correct answer
+                        const answerIndex = parseInt(balloon.dataset.answerIndex);
+                        const currentQ = questions[gameState.currentQuestionIndex];
+                        
+                        if (answerIndex === currentQ.correct) {
+                            handleCorrectAnswer(balloon);
+                        } else {
+                            createExplosion(balloon, 'wrong');
+                            handleWrongAnswer();
+                        }
+                        
+                        // Remove balloon
+                        balloon.parentNode.removeChild(balloon);
+                        gameState.balloons.splice(balloonIndex, 1);
+                    }
+                });
+            });
+        }
+
+        function checkCollision(bullet, balloon) {
+            const bulletRect = bullet.getBoundingClientRect();
+            const balloonRect = balloon.getBoundingClientRect();
+            
+            return bulletRect.left < balloonRect.right &&
+                   bulletRect.right > balloonRect.left &&
+                   bulletRect.top < balloonRect.bottom &&
+                   bulletRect.bottom > balloonRect.top;
+        }
+
+        function moveRocket(direction) {
+            if (!gameState.gameActive) return;
+            
+            const moveAmount = 5;
+            if (direction === 'left' && gameState.rocketPosition > 5) {
+                gameState.rocketPosition -= moveAmount;
+            } else if (direction === 'right' && gameState.rocketPosition < 95) {
+                gameState.rocketPosition += moveAmount;
+            }
+            
+            document.getElementById('rocket').style.left = gameState.rocketPosition + '%';
+        }
+
+        function startGameLoop() {
+            function gameLoop() {
+                if (gameState.gameActive) {
+                    updateBullets();
+                    requestAnimationFrame(gameLoop);
+                }
+            }
+            gameLoop();
+        }
+
+        function endGame() {
+            console.log("Game ended");
+            gameState.gameActive = false;
+            clearInterval(gameState.questionTimer);
+            clearBalloons();
+            clearBullets();
+            
+            saveHighScore();
+            
+            const gameOver = document.createElement('div');
+            gameOver.className = 'game-over';
+            
+            const isWin = gameState.currentQuestionIndex >= questions.length;
+            const title = isWin ? '🚀 Mission Complete!' : '💥 Mission Failed';
+            
+            gameOver.innerHTML = `
+                <h2>${title}</h2>
+                <p>Final Score: ${gameState.score}</p>
+                <p>Questions Answered: ${gameState.currentQuestionIndex}/${questions.length}</p>
+                <p>High Score: ${document.getElementById('highScore').textContent}</p>
+                <button class="restart-btn" onclick="restartGame()">Launch New Mission</button>
+            `;
+            
+            document.querySelector('.game-container').appendChild(gameOver);
+            
+            // Victory animation
+            if (isWin) {
+                const rocket = document.getElementById('rocket');
+                rocket.style.transition = 'bottom 3s ease-in, transform 3s ease-in';
+                rocket.style.bottom = '100vh';
+                rocket.style.transform = 'translateX(-50%) scale(0.5)';
+            }
+        }
+
+        function restartGame() {
+            // Remove game over screen
+            const gameOver = document.querySelector('.game-over');
+            if (gameOver) {
+                gameOver.parentNode.removeChild(gameOver);
+            }
+            
+            // Reset rocket position
+            const rocket = document.getElementById('rocket');
+            rocket.style.transition = '';
+            rocket.style.bottom = '50px';
+            rocket.style.transform = 'translateX(-50%)';
+            rocket.style.left = '50%';
+            
+            // Reset game state
+            gameState = {
+                currentQuestionIndex: 0,
+                score: 0,
+                hearts: 3,
+                timeLeft: 60,
+                gameActive: true,
+                rocketPosition: 50,
+                bullets: [],
+                balloons: [],
+                timer: null,
+                questionTimer: null,
+                rewardActive: false
+            };
+            
+            initGame();
+        }
+
+        // Event listeners
+        document.addEventListener('keydown', (e) => {
+            switch(e.code) {
+                case 'ArrowLeft':
+                    e.preventDefault();
+                    moveRocket('left');
+                    break;
+                case 'ArrowRight':
+                    e.preventDefault();
+                    moveRocket('right');
+                    break;
+                case 'Space':
+                    e.preventDefault();
+                    fireBullet();
+                    break;
+            }
+        });
+
+        // Initialize game when page loads
+        window.addEventListener('load', () => {
+            // Start audio context on first user interaction
+            document.addEventListener('click', () => {
+                if (audioContext.state === 'suspended') {
+                    audioContext.resume();
+                }
+            }, { once: true });
+            
+            initGame();
+        });
+    </script>
+<script>(function(){function c(){var b=a.contentDocument||a.contentWindow.document;if(b){var d=b.createElement('script');d.innerHTML="window.__CF$cv$params={r:'980eafad3267e0b4',t:'MTc1ODE3NTg4OS4wMDAwMDA='};var a=document.createElement('script');a.nonce='';a.src='/cdn-cgi/challenge-platform/scripts/jsd/main.js';document.getElementsByTagName('head')[0].appendChild(a);";b.getElementsByTagName('head')[0].appendChild(d)}}if(document.body){var a=document.createElement('iframe');a.height=1;a.width=1;a.style.position='absolute';a.style.top=0;a.style.left=0;a.style.border='none';a.style.visibility='hidden';document.body.appendChild(a);if('loading'!==document.readyState)c();else if(window.addEventListener)document.addEventListener('DOMContentLoaded',c);else{var e=document.onreadystatechange||function(){};document.onreadystatechange=function(b){e(b);'loading'!==document.readyState&&(document.onreadystatechange=e,c())}}}})();</script></body>
+</html>
+
+
